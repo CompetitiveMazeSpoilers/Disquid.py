@@ -45,7 +45,7 @@ class Board:
         self.bases = {}
 
     def make_base(self, player, base: Position):
-        self.bases[player] = self[base]
+        self.bases[player] = base
         for dx, dy in Board.base_offsets:
             self[(base[0] + dx, base[1] + dy)].set_base(player)
 
@@ -137,7 +137,7 @@ class Board:
         # path from player base
         prev = [[None for j in range(self.cols)] for i in range(self.rows)]
 
-        pbase = self.bases[player]
+        pbase = self[self.bases[player]]
         dist[pbase.row][pbase.col] = 0
         pq = [(0, pbase)]
 
