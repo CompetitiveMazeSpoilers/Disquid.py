@@ -93,4 +93,4 @@ class DisquidClient(discord.Client):
 
 
 if __name__ == '__main__':
-    DisquidClient().start()
+    DisquidClient().start(input('Bot API Token: '))
