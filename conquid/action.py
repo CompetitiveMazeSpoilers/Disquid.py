@@ -1,9 +1,12 @@
 from conquid.state import *
 from typing import List, Tuple
 from functools import partial
+
 Position = Tuple[int, int]
 
+
 class GameHistory:
+
     def __init__(self, rows, cols, *bases):
         self.rows = rows
         self.cols = cols
@@ -14,7 +17,7 @@ class GameHistory:
     def store(self, move):
         self.moves.append(move.__dict__)
 
-    def to_updater(move):
+    def to_updater(self, move):
         dct = move.copy()
         type = dct['type']
         del dct['type']
@@ -35,20 +38,24 @@ class GameHistory:
         # update boards with moves to generate list
         boards = [board.copy()]
         for move in self.moves:
-            GameHistory.to_updater(move)(board)
+            GameHistory.to_updater(self, move)(board)
             boards.append(board.copy())
 
         return boards
+
 
 """
 The following classes as meant as convenient adaptors to input move info
 into GameHistory
 """
+
+
 class AcquireMove:
     def __init__(self, player, cells: List[Position]):
         self.type = 'A'
         self.player = player
         self.locs = cells
+
 
 class ConquerMove:
     def __init__(self, player):
@@ -58,11 +65,13 @@ class ConquerMove:
     def update(self, board):
         board.conquer(self.player)
 
+
 class VanquishMove:
     def __init__(self, player, corner: Position):
         self.type = 'V'
         self.player = player
         self.corner = corner
+
 
 class ConquestMove:
     def __init__(self, player):

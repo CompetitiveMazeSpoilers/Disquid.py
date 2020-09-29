@@ -2,7 +2,9 @@ import math
 from collections import deque
 from heapq import heappush, heappop
 from typing import List, Tuple
+
 Position = Tuple[int, int]
+
 
 class Cell:
 
@@ -23,20 +25,21 @@ class Cell:
         self.base = True
 
     def copy(self):
-        cpy = Cell(self.row,self.col)
+        cpy = Cell(self.row, self.col)
         cpy.player = self.player
         cpy.base = self.base
         return cpy
 
+
 class Board:
     # a representation of the state and logic of the game
-    adjacent_offsets = [(0,1),(0,-1),(1,0),(-1,0)]
-    base_offsets = [(i,j) for i in range(-1,2) for j in range(-1,2)]
-    vanquish_offsets = [(i,j) for i in range(4) for j in range(4)]
-    vanquish_surround = [(-1,0), (-1,1), (-1,2), (-1,3),
-                         (4,0), (4,1), (4,2), (4,3),
-                         (0,-1), (1,-1), (2,-1), (3,-1),
-                         (0,4), (1,4), (2,4), (3,4)]
+    adjacent_offsets = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+    base_offsets = [(i, j) for i in range(-1, 2) for j in range(-1, 2)]
+    vanquish_offsets = [(i, j) for i in range(4) for j in range(4)]
+    vanquish_surround = [(-1, 0), (-1, 1), (-1, 2), (-1, 3),
+                         (4, 0), (4, 1), (4, 2), (4, 3),
+                         (0, -1), (1, -1), (2, -1), (3, -1),
+                         (0, 4), (1, 4), (2, 4), (3, 4)]
 
     def __init__(self, r, c):
         self.rows = r
@@ -82,7 +85,6 @@ class Board:
         for a in cells:
             a.player = player
 
-
     def conquer(self, player):
         enemy = 3 - player
         # player cells that touch enemy cell
@@ -98,7 +100,7 @@ class Board:
                 if adj.player == enemy:
                     touching[adj.row][adj.col] += 1
                     if touching[adj.row][adj.col] >= 2:
-                        #conquer neighbour
+                        # conquer neighbour
                         adj.player = player
                         q.append(adj)
 
@@ -129,7 +131,7 @@ class Board:
             cell.player = 0
 
     def conquest(self, player):
-        enemy = 3-player
+        enemy = 3 - player
         # distance to player base
         dist = [[math.inf for j in range(self.cols)] for i in range(self.rows)]
         # is distance fixed
@@ -147,7 +149,7 @@ class Board:
             visited[curr.row][curr.col] = True
             for adj in self.adjacent(curr, base=True):
                 if not visited[adj.row][adj.col] and adj.player == player:
-                    #update unvisited neighbours for shorter path
+                    # update unvisited neighbours for shorter path
                     if dist[adj.row][adj.col] > pathlen + 1:
                         prev[adj.row][adj.col] = curr
                         dist[adj.row][adj.col] = pathlen + 1
@@ -160,6 +162,7 @@ class Board:
                     return
         # no path found
         raise InvalidMove()
+
 
 class InvalidMove(Exception):
     pass
