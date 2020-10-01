@@ -11,8 +11,8 @@ class Cell:
     player = 0 if empty
     player = 1 or 2 respectively for player 1 or 2
 
-    base = False if its a normal gameplay cell or it is the center of the base
-    base = True if its in the 8 cell ring of the base surrounding the center
+    base = False if its a normal gameplay cell
+    base = True if its in the base
     """
     def __init__(self):
         self.player = 0
@@ -41,7 +41,7 @@ class Board:
        and the second coordinate may range from 0 to cols - 1
     """
     adjacent_offsets = [(0,1),(0,-1),(1,0),(-1,0)]
-    base_offsets = [(i,j) for i in range(-1,2) for j in range(-1,2)]
+    base_offsets = [(i,j) for i in range(2) for j in range(2)]
     vanquish_offsets = [(i,j) for i in range(4) for j in range(4)]
     vanquish_surround = [(-1,0), (-1,1), (-1,2), (-1,3),
                          (4,0), (4,1), (4,2), (4,3),
@@ -56,12 +56,11 @@ class Board:
 
         self.make_base(1)
         self.make_base(2)
-
+    
     def make_base(self, player):
         center = self.bases[player]
         for dx, dy in Board.base_offsets:
             self[(center[0] + dx, center[1] + dy)].set_base(player)
-        self[center].base = False
 
     def copy(self):
         cpy = Board(self.rows, self.cols, self.bases)
