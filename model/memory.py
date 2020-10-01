@@ -45,6 +45,8 @@ class Cache:
 
     2.  Once a valid move is entered, it may be undone by calling <cache>.undo()
         If ones wishes to confirm the move and begin the next turn, call <cache>.confirm()
+        If the confirmed move is a valid conquest, confirm method will return a value of True
+        to indicate the game is won by the current player
 
     The cache must be passed an instance of a BoardView class upon construction
     that represents the view of the game as presented to the player.
