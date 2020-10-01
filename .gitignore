@@ -127,5 +127,5 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-/.vs/Disquid.py/v15
+/.vs/
 *.json
