@@ -11,7 +11,7 @@ class History:
     ***Remember, if a board is the (i)th state in the board history,
     then the last move done is the (i-1)th action in the move history
     """
-    def __init__(self, rows, cols, bases, moves=[]):
+    def __init__(self, rows, cols, bases, moves):
         self.rows = rows
         self.cols = cols
         self.bases = bases
