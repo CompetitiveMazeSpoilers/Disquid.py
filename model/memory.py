@@ -1,4 +1,3 @@
-from boardview import BoardView
 from model.state import *
 
 class History:
@@ -20,6 +19,9 @@ class History:
 
     def store(self, move):
         self.moves.append(move.__dict__)
+
+    def is_finished(self):
+        return self.moves and self.moves[-1]['type'] == 'Q'
 
     def move_history(self):
         return [Move(**mv) for mv in self.moves]
@@ -48,38 +50,66 @@ class Cache:
         If the confirmed move is a valid conquest, confirm method will return a value of True
         to indicate the game is won by the current player
 
-    The cache must be passed an instance of a BoardView class upon construction
-    that represents the view of the game as presented to the player.
     The BoardView class must have a method with signature
-        BoardView.set_board(self, <board>)
+        BoardView.set_view(self, <board>)
     thru which it receives updated boards to be displayed
+
+    The BoardView class must also have a method with signature
+        BoardView.set_player(self, <player>, win=False)
+    thru which it receives the current player whose turn it is and whether they won yet.
     """
-    def __init__(self, history: History, boardview: BoardView):
+    def __init__(self, history: History, controller: 'Controller'):
         self.hist = history
+        self.controller = controller
         self.current_player = 1
-        self.latest = history.board_history()[0]
-        self.save = self.latest.copy()
-        self.move = None
-        self.bv = boardview
+        self.nstate = 0
+        self.save = history.board_history()
+        self.nstate = len(self.save) - 1
+        self.latest = self.save[-1].copy()
+        self.move = None 
+
+    def at_last_state(self, finish_allowed=True):
+        return self.nstate == len(self.save)-1 and \
+            (finish_allowed or not self.hist.is_finished())
+
+    def play_back(self):
+        if self.nstate > 0:
+            self.nstate -= 1
+            self.current_player = 3 - self.current_player
+        self.boardview.set_view(self.save[self.nstate])
+        self.boardview.set_player(self.current_player)
+
+    def play_forward(self):
+        if self.nstate < len(self.save)-1:
+            self.nstate += 1
+            self.current_player = 3 - self.current_player
+        self.boardview.set_view(self.save[self.nstate])
+        self.boardview.set_player(self.current_player)
+        if self.at_last_state() and self.hist.is_finished():
+            self.boardview.set_player(3 - self.current_player, win=True)
 
     def receive(self, move: Move):
-        if not self.move:
-            move.execute(self.latest, validate=True)
-            self.bv.set_board(self.latest)
-            self.move = move
+        if self.move:
+            return
+        move.execute(self.latest, validate=True)
+        self.boardview.set_view(self.latest)
+        self.move = move
 
-    def undo(self):
-        self.latest = self.save.copy()
-        self.bv.set_board(self.latest)
+    def discard_change(self):
+        self.latest = self.save[-1].copy()
+        self.boardview.set_view(self.latest)
         self.move = None
 
     def confirm(self):
-        if self.move:
-            self.save = self.latest.copy()
-            self.hist.store(self.move)
-            if self.move.type == 'Q':
-                self.move = None
-                return True
-            else:
-                self.current_player = 3 - self.current_player
-            self.move = None
+        if not self.move:
+            return
+        self.save.append(self.latest.copy())
+        self.hist.store(self.move)
+        self.nstate += 1
+        self.current_player = 3 - self.current_player
+        if self.move.type == 'Q':
+            self.controller.game_won()
+            self.play_forward()
+        else:
+            self.boardview.set_player(self.current_player)
+        self.move = None
