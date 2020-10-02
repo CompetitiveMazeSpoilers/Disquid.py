@@ -21,7 +21,7 @@ class DisquidClient(discord.Client):
     """
 
     default_prefix = '.q'
-    prefix_file = pathlib.Path('Data/prefixes.json')
+    prefix_file = pathlib.Path('data/prefixes.json')
 
     def __init__(self, **options):
         """
