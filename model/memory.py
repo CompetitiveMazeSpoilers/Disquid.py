@@ -11,11 +11,11 @@ class History:
     ***Remember, if a board is the (i)th state in the board history,
     then the last move done is the (i-1)th action in the move history
     """
-    def __init__(self, rows, cols, bases):
+    def __init__(self, rows, cols, bases, moves=[]):
         self.rows = rows
         self.cols = cols
         self.bases = bases
-        self.moves = []
+        self.moves = moves
 
     def store(self, move):
         self.moves.append(move.__dict__)
@@ -58,15 +58,20 @@ class Cache:
         BoardView.set_player(self, <player>, win=False)
     thru which it receives the current player whose turn it is and whether they won yet.
     """
-    def __init__(self, history: History, controller: 'Controller'):
+    def __init__(self, history: History):
         self.hist = history
-        self.controller = controller
         self.current_player = 1
         self.nstate = 0
         self.save = history.board_history()
         self.nstate = len(self.save) - 1
         self.latest = self.save[-1].copy()
         self.move = None 
+
+    def link_gui(self, controller: 'Controller', boardview: 'Boardview'):
+        self.controller = controller
+        self.boardview = boardview
+        boardview.set_view(self.latest)
+        boardview.set_player(self.current_player)
 
     def at_last_state(self, finish_allowed=True):
         return self.nstate == len(self.save)-1 and \
