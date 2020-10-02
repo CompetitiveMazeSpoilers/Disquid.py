@@ -3,8 +3,17 @@ from collections import deque
 from heapq import heappush, heappop
 from typing import Dict, List, Tuple
 Position = Tuple[int,int]
+
 class Cell:
-    """stores information about player and base status"""
+    """
+    stores information about player and base status
+
+    player = 0 if empty
+    player = 1 or 2 respectively for player 1 or 2
+
+    base = False if its a normal gameplay cell
+    base = True if its in the base
+    """
     def __init__(self):
         self.player = 0
         self.base = False
@@ -20,9 +29,19 @@ class Cell:
         return cpy
 
 class Board:
-    """a representation of the state of the game and its transformations"""
+    """
+    A representation of the state of the game and its transformations
+    To obtain a the cell at a particular location, call
+        <board>[<position>]
+    where:
+    position is a pair of ints
+
+    ***Note that the board is indexed from 0
+       so the first coordinate may range from 0 to rows - 1
+       and the second coordinate may range from 0 to cols - 1
+    """
     adjacent_offsets = [(0,1),(0,-1),(1,0),(-1,0)]
-    base_offsets = [(i,j) for i in range(-1,2) for j in range(-1,2)]
+    base_offsets = [(i,j) for i in range(2) for j in range(2)]
     vanquish_offsets = [(i,j) for i in range(4) for j in range(4)]
     vanquish_surround = [(-1,0), (-1,1), (-1,2), (-1,3),
                          (4,0), (4,1), (4,2), (4,3),
@@ -37,12 +56,11 @@ class Board:
 
         self.make_base(1)
         self.make_base(2)
-
+    
     def make_base(self, player):
-        center = self.bases[player]
+        center = self.bases[player-1]
         for dx, dy in Board.base_offsets:
             self[(center[0] + dx, center[1] + dy)].set_base(player)
-        self[center].base = False
 
     def copy(self):
         cpy = Board(self.rows, self.cols, self.bases)
@@ -133,7 +151,7 @@ class Board:
         # path from player base
         prev = [[None for j in range(self.cols)] for i in range(self.rows)]
 
-        i, j = self.bases[player]
+        i, j = self.bases[player-1]
         start = (i,j)
         dist[i][j] = 0
         pq = [(0, start)]
@@ -160,14 +178,32 @@ class Board:
         raise InvalidMove()
 
 class Move:
-    """A Command representing executable moves on the gameboard"""
-    def __init__(self, type, player, **kwargs):
+    """
+    A Command representing executable moves on the gameboard
+    The format for creating a Move is as below:
+    Acquire:
+        Move('A', <player>, locs=<list of positions to be acquired>)
+
+    Conquer:
+        Move('C', <player>)
+
+    Vanquish:
+        Move('V', <player>, corner=<position of upper-left corner of 4x4 square to be deleted>)
+    
+    Conquest:
+        Move('Q', <player>)
+
+    where:
+        player is 1 or 2
+        position is a pair of ints
+    """
+    def __init__(self, type, player, locs=None, corner=None):
         self.type = type
         self.player = player
         if type == 'A':
-            self.locs = kwargs['locs']
+            self.locs = locs
         if type == 'V':
-            self.corner = kwargs['corner']
+            self.corner = corner
 
     def execute(self, board: Board, *, validate):
         if self.type == 'A':
