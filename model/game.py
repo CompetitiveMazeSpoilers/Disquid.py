@@ -1,4 +1,4 @@
-from model.state import Move, Board
+from model.memory import *
 
 
 class Utility:
@@ -22,21 +22,21 @@ class Utility:
             for flag_code in args:
                 loc = Utility.translate_flag(flag_code)
                 if loc is None:
-                    return
+                    raise InvalidMove
                 locs.append(loc)
             return Move(prefix, player_num, locs=locs)
         # vanquish
         elif prefix == 'V':
             if not len(args) == 3:
-                return
+                raise InvalidMove
             if args[0] < 0 or args[0] > 27 or args[1] < 0 or args[1] > 13:
-                return
+                raise InvalidMove
             return Move(prefix, player_num, corner=(args[0], args[1]))
         # conquer / conquest
         elif prefix == 'C' or prefix == 'Q':
             return Move(prefix, player_num)
         else:
-            return
+            raise InvalidMove
 
     @staticmethod
     def translate_flag(flag):
@@ -53,12 +53,21 @@ class Utility:
 
 
 class Player:
+    """
+    Storage of a discord user that has interacted with the bot
+    or started and subsequently played a game of Conquid.
+    """
 
-    def __init__(self, id: int):
-        self.id = id
+    def __init__(self, p_id: int):
+        self.p_id = p_id
 
 
 class Challenge(object):
+    """
+    Object created when one player wishes to start a game with another.
+    Resolves to a new game when both players consent.
+    """
 
-    def __init__(self):
-        pass
+    def __init__(self, p1_id: int, p2_id: int):
+        self.p1_id = p1_id
+        self.p2_id = p2_id
