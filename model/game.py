@@ -37,5 +37,12 @@ class Utility:
         pass
 
 
-class Player:
+class Player(object):
     pass
+
+
+class Challenge(object):
+
+    def __init__(self):
+        pass
+

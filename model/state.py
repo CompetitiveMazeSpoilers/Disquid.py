@@ -6,6 +6,7 @@ from heapq import heappush, heappop
 from pathlib import Path
 from typing import List, Tuple
 
+default_board_file = Path('data/board.json')
 hardcoded_board = '(<gu)(<pm)(<gf)(<pg)(<mk)(<va)(<dz)(<kz)(<np)(vu)(cu)(om)(pr)(by)(sj)(dm)(gg)(ge)(mq)(>np)(>kz)(' \
                   '>dz)(>va)(>mk)(>pg)(>gf)(>pm)(>gu)\n(<bl)(<as)(<cd)(<tz)(<zm)(<pt)(<gt)(<kg)(<mo)(sx)(gw)(ph)(dj)(' \
                   'st)(is)(fo)(no)(ax)(bv)(>mo)(>kg)(>gt)(>pt)(>zm)(>tz)(>cd)(>as)(>bl)\n(<gd)(<gy)(<cg)(<bn)(<qa)(' \
@@ -29,10 +30,8 @@ hardcoded_board = '(<gu)(<pm)(<gf)(<pg)(<mk)(<va)(<dz)(<kz)(<np)(vu)(cu)(om)(pr)
                   '<na)(<kn)(<lk)(<tm)(<ic)(<sa)(<mp)(ss)(eh)(gq)(jo)(mz)(ch)(lr)(uy)(my)(tg)(>mp)(>sa)(>ic)(>tm)(' \
                   '>lk)(>kn)(>na)(>tl)(>vi)\n(<me)(<tk)(<bt)(<cx)(<re)(<mt)(<pk)(<cy)(<br)(za)(km)(zw)(cf)(ag)(gb)(' \
                   'us)(io)(um)(dg)(>br)(>cy)(>pk)(>mt)(>re)(>cx)(>bt)(>tk)(>me) '
-default_board_file = Path('data/board.json')
 
 Flag = ([str], str)
-
 Position = Tuple[int, int]
 
 
