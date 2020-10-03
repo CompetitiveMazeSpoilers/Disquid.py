@@ -1,29 +1,40 @@
-from model.state import Move
+from model.state import Move, Board
 
 
 class Utility:
 
-    # takes string input from discord and creates a move
     @staticmethod
-    def read_move(action_text) -> Move:
+    def read_move(player, action_text) -> Move:
         """
         Turns text into a move.
         :param action_text: Text that should be converted.
+        :param player: Player doing the move.
         :return: The move based on the given text.
         """
         args = action_text.split()
         prefix = args[0]
+        player_num = player.id_num
+        del args[0]
+
+        # acquire
         if prefix == 'A':
-            # unfinished
-            pass
+            locs = []
+            for flag_code in args:
+                loc = Utility.translate_flag(flag_code)
+                if loc is None:
+                    return
+                locs.append(loc)
+            return Move(prefix, player_num, locs)
+        # vanquish
         elif prefix == 'V':
             if not len(args) == 3:
                 return
-            for i in range(len(args) - 1):
-                # unfinished
-                pass
+            if args[0] < 0 or args[0] > 27 or args[1] < 0 or args[1] > 13:
+                return
+            return Move(prefix, player_num, (args[0], args[1]))
+        # conquer / conquest
         elif prefix == 'C' or prefix == 'Q':
-            return Move(prefix)
+            return Move(prefix, player_num)
         else:
             return
 
@@ -34,8 +45,16 @@ class Utility:
         :param flag: The flag that should be translated.
         :return: Coordinates of a given flag on the default layout.
         """
-        pass
-
+        for row in Board.flag_array:
+            r = Board.flag_array.index(row)
+            for flag_dec in row:
+                if flag in flag_dec[0]:
+                    c = row.index(flag_dec)
+                    return c, r
+        return
 
 class Player:
-    pass
+
+    def __init__(self, id_num):
+        self.id_num = id_num
+
