@@ -205,8 +205,41 @@ class Board(list):
                         # conquer neighbour
                         self[adj[0]][adj[1]].player = player
                         q.append(adj)
+    
+    def is_valid_vanquish(self, player, corner: Position) -> bool:
+        """
+        Checks whether a given vanquish is a valid move
+        :param player: The player who is vanquishing.
+        :param corner: Top left corner of the square to be vanquished.
+        :return: True if move is valid, or else False
+        """
+        # check that player surrounds square
+        surrounding = 0
+        for dx, dy in Board.vanquish_surround:
+            loc = (corner[0] + dx, corner[1] + dy)
+            if self.is_valid_position(loc):
+                cell = self[loc[0]][loc[1]]
+                if not cell.base and cell.player == player:
+                    surrounding += 1
+        if surrounding < 4:
+            return False
+        # check that square is a single color of nonbase cells
+        square_player = self[corner[0]][corner[1]].player
+        for dx, dy in Board.vanquish_offsets:
+            loc = (corner[0] + dx, corner[1] + dy)
+            if not self.is_valid_position(loc) or self[loc[0]][loc[1]].base or \
+                    self[loc[0]][loc[1]].player != square_player:
+                return False
+        # is a valid move
+        return True
 
     def vanquish(self, player, corner: Position, validate=False):
+        """
+        Vanquishes a 4x4 square of the same color given that:
+        The player has at least 4 cells outside of and adjacent to the square.
+        :param player: The player who is vanquishing.
+        :param corner: Top left corner of the square to be vanquished.
+        """
         # check that player surrounds square
         if validate:
             surrounding = 0
@@ -218,7 +251,7 @@ class Board(list):
                         surrounding += 1
             if surrounding < 4:
                 raise InvalidMove()
-        # check that square is filled with enemy
+        # check that square is a single color
         square_player = self[corner[0]][corner[1]].player
         square = []
         for dx, dy in Board.vanquish_offsets:
