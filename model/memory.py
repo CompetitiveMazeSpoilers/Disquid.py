@@ -48,18 +48,9 @@ class Cache(object):
         It is possible for the move to be invalid, in which case it will be rejected and
         an InvalidMove exception will be raised from the method.
 
-    2.  Once a valid move is entered, it may be undone by calling <cache>.undo()
-        If ones wishes to confirm the move and begin the next turn, call <cache>.confirm()
-        If the confirmed move is a valid conquest, confirm method will return a value of True
-        to indicate the game is won by the current player
-
     The BoardView class must have a method with signature
-        BoardView.set_view(self, <board>)
-    thru which it receives updated boards to be displayed
-
-    The BoardView class must also have a method with signature
-        BoardView.set_player(self, <player>, win=False)
-    thru which it receives the current player whose turn it is and whether they won yet.
+        BoardView.set_view(self, <board>, <player>, win=False)
+    thru which it receives the board, current player whose turn it is and whether they won yet.
     """
 
     def __init__(self, history: History):
@@ -71,43 +62,36 @@ class Cache(object):
         self.latest = self.save[-1].copy()
         self.move = None
 
-    def link_gui(self, controller: 'Controller', boardview: 'Boardview'):
-        self.controller = controller
-        self.boardview = boardview
-        boardview.set_view(self.latest)
-        boardview.set_player(self.current_player)
-
     def at_last_state(self, finish_allowed=True):
         return self.nstate == len(self.save) - 1 and \
                (finish_allowed or not self.hist.is_finished())
 
-    def play_back(self):
-        if self.nstate > 0:
-            self.nstate -= 1
-            self.current_player = 3 - self.current_player
-        self.boardview.set_view(self.save[self.nstate])
-        self.boardview.set_player(self.current_player)
+    # def play_back(self):
+    #    if self.nstate > 0:
+    #       self.nstate -= 1
+    #        self.current_player = 3 - self.current_player
+    #    self.boardview.set_view(self.save[self.nstate], self.current_player)
 
-    def play_forward(self):
-        if self.nstate < len(self.save) - 1:
-            self.nstate += 1
-            self.current_player = 3 - self.current_player
-        self.boardview.set_view(self.save[self.nstate])
-        self.boardview.set_player(self.current_player)
-        if self.at_last_state() and self.hist.is_finished():
-            self.boardview.set_player(3 - self.current_player, win=True)
+    # def play_forward(self):
+    #    if self.nstate < len(self.save) - 1:
+    #        self.nstate += 1
+    #        self.current_player = 3 - self.current_player
+    #    if self.at_last_state() and self.hist.is_finished():
+    #        self.boardview.set_view(self.save[self.nstate], 3 - self.current_player, win=True)
+    #    else:
+    #        self.boardview.set_view(self.save[self.nstate], self.current_player)
 
     def receive(self, move: Move):
         if self.move:
             return
         move.execute(self.latest, validate=True)
-        self.boardview.set_view(self.latest)
         self.move = move
+        self.confirm()
 
-    def discard_change(self):
-        self.latest = self.save[-1].copy()
-        self.boardview.set_view(self.latest)
-        self.move = None
+    # def discard_change(self):
+    #    self.latest = self.save[-1].copy()
+    #    self.boardview.set_view(self.latest)
+    #    self.move = None
 
     def confirm(self):
         if not self.move:
@@ -118,7 +102,7 @@ class Cache(object):
         self.current_player = 3 - self.current_player
         if self.move.move_type == 'Q':
             self.controller.game_won()
-            self.play_forward()
+            self.boardview.set_view(self.latest, 3 - self.current_player, win=True)
         else:
-            self.boardview.set_player(self.current_player)
+            self.boardview.view_player(self.latest, self.current_player)
         self.move = None
