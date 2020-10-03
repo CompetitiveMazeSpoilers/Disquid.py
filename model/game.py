@@ -56,8 +56,8 @@ class Utility:
 
 class Player:
 
-    def __init__(self, id_num):
-        self.id_num = id_num
+    def __init__(self, id: int):
+        self.id = id
 
 
 class Challenge(object):
