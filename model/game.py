@@ -1,5 +1,6 @@
 from model.memory import *
 
+
 class Utility:
 
     @staticmethod
@@ -51,13 +52,30 @@ class Utility:
         return
 
 
-
 class Challenge(object):
     """
     Object created when one player wishes to start a game with another.
     Resolves to a new game when both players consent.
     """
 
-    def __init__(self, p1_id: int, p2_id: int):
-        self.p1_id = p1_id
-        self.p2_id = p2_id
+    def __init__(self, p1: Player, p2: Player, game_args: [str] = ''):
+        self.p1 = p1
+        self.p2 = p2
+        self.game_args = game_args
+
+    def __eq__(self, other):
+        if isinstance(other, Challenge):
+            return self.p1 == other.p1 and self.p2 == other.p2
+        else:
+            return NotImplemented
+
+
+class Game(object):
+
+    standard_width = 28
+    standard_height = 14
+
+    def __init__(self, players: [Player]):
+        self.players = players
+        self.history = History(Game.standard_height, Game.standard_width)
+        self.cache = Cache(self.history)

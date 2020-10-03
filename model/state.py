@@ -113,13 +113,12 @@ class Board(list):
     flag_array: [[Flag]]
     default_board_file = Path('data/board.json')
 
-    def __init__(self, r: int, c: int, bases: [Position], players: [Player]):
+    def __init__(self, r: int, c: int, bases: [Position]):
         super().__init__()
         self.rows = r
         self.cols = c
         self.append([Cell() for j in range(c)] for i in range(r))
         self.bases = bases
-        self.players = players
 
         self.make_base(1)
         self.make_base(2)
@@ -166,7 +165,7 @@ class Board(list):
                 if base or not self[loc[0]][loc[1]].base:
                     yield loc
 
-    def acquire(self, player, locs: [Position], validate=False):
+    def acquire(self, player: int, locs: [Position], validate=False):
         """
         The acquire move.
         :param player: The player who is acquiring.
@@ -211,7 +210,7 @@ class Board(list):
                         self[adj[0]][adj[1]].player = player
                         q.append(adj)
 
-    def is_valid_vanquish(self, player, corner: Position) -> bool:
+    def is_valid_vanquish(self, player: int, corner: Position) -> bool:
         """
         Checks whether a given vanquish is a valid move
         :param player: The player who is vanquishing.
@@ -238,7 +237,7 @@ class Board(list):
         # is a valid move
         return True
 
-    def vanquish(self, player, corner: Position, validate=False):
+    def vanquish(self, player: int, corner: Position, validate=False):
         """
         Vanquishes a 4x4 square of the same color given that:
         The player has at least 4 cells outside of and adjacent to the square.
@@ -271,7 +270,11 @@ class Board(list):
         for sq in square:
             sq.player = 0
 
-    def conquest(self, player):
+    def conquest(self, player: int):
+        """
+        The game ending move. If this succeeds, then the attempting player wins.
+        :param player: The player number that is attempting the move.
+        """
         enemy = 3 - player
         # distance to player base
         dist = [[math.inf for j in range(self.cols)] for i in range(self.rows)]
@@ -322,10 +325,10 @@ class Board(list):
                 # player cell
                 if cell.base:
                     # base
-                    emoji = cell_emoji[player - 1][0]
+                    emoji = player.emoji[0]
                 else:
                     # nonbase
-                    emoji = cell_emoji[player - 1][1]
+                    emoji = player.emoji[1]
             # add this cell's emoji to string
             emoji_string += emoji
             # if row end, add line break

@@ -13,7 +13,7 @@ class History(object):
     then the last move done is the (i-1)th action in the move history
     """
 
-    def __init__(self, rows, cols, bases, moves):
+    def __init__(self, rows: int, cols: int, bases: [Position], moves: [Move]):
         self.rows = rows
         self.cols = cols
         self.bases = bases
