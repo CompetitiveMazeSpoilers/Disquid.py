@@ -30,6 +30,8 @@ hardcoded_board = '(<gu)(<pm)(<gf)(<pg)(<mk)(<va)(<dz)(<kz)(<np)(vu)(cu)(om)(pr)
                   '>lk)(>kn)(>na)(>tl)(>vi)\n(<me)(<tk)(<bt)(<cx)(<re)(<mt)(<pk)(<cy)(<br)(za)(km)(zw)(cf)(ag)(gb)(' \
                   'us)(io)(um)(dg)(>br)(>cy)(>pk)(>mt)(>re)(>cx)(>bt)(>tk)(>me) '
 default_board_file = Path('data/board.json')
+cell_emoji = ((":purple_square:",":purple_circle:"),(":green_square:",":green_circle:"))
+
 Flag = ([str], str)
 
 
@@ -234,6 +236,34 @@ class Board(list):
                     return
         # no path found
         raise InvalidMove
+
+    def __str__(self):
+        emoji_string = ""
+        for i, cell, flag in enumerate(zip(self, flag_array)):
+            player = cell.player
+            j = 0
+            emoji = ""
+            if player == 0:
+                # blank cell, use flag, add spoilers
+                emoji = "||" + flag[1] + "||"
+            else:
+                # player cell
+                if cell.base:
+                    # base
+                    emoji = cell_emoji[player-1][0]
+                else:
+                    # nonbase
+                    emoji = cell_emoji[player-1][1]
+            # add this cell's emoji to string
+            emoji_string += emoji
+            # if row end, add line break
+            if (i+1) % 28 == 0:
+                emoji_string += "\n"
+                j += 1
+                # add message breaks on 5th and 9th rows
+                if j == 5 or j == 9
+                    emoji_string += "#msg"
+        return emoji_string
 
 
 class Move(object):
