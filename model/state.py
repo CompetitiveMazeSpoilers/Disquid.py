@@ -151,7 +151,7 @@ class Board(list):
         """
         Returns the adjacent cells.
         :param center: The center of which to test adjacent cells.
-        :param base: Whether or not the given pos is a base.
+        :param base: Whether or not base cell included in the list
         :return: An adjacent cell using yield.
         """
         for dx, dy in Board.adjacent_offsets:
@@ -160,7 +160,7 @@ class Board(list):
                 if base or not self[loc[0]][loc[1]].base:
                     yield loc
 
-    def acquire(self, player, locs: List[Position], validate=False):
+    def acquire(self, player, locs: [Position], validate=False):
         """
         The acquire move.
         :param player: The player who is acquiring.
@@ -269,7 +269,7 @@ class Board(list):
 
     def __str__(self):
         emoji_string = ""
-        for i, cell, flag in enumerate(zip(self, Board.flag_array)):
+        for i, (cell, flag) in enumerate(zip(self, Board.flag_array)):
             player = cell.player
             j = 0
             emoji = ''

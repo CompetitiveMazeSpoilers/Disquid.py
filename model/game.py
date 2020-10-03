@@ -24,14 +24,14 @@ class Utility:
                 if loc is None:
                     return
                 locs.append(loc)
-            return Move(prefix, player_num, locs)
+            return Move(prefix, player_num, locs=locs)
         # vanquish
         elif prefix == 'V':
             if not len(args) == 3:
                 return
             if args[0] < 0 or args[0] > 27 or args[1] < 0 or args[1] > 13:
                 return
-            return Move(prefix, player_num, (args[0], args[1]))
+            return Move(prefix, player_num, corner=(args[0], args[1]))
         # conquer / conquest
         elif prefix == 'C' or prefix == 'Q':
             return Move(prefix, player_num)
@@ -45,12 +45,10 @@ class Utility:
         :param flag: The flag that should be translated.
         :return: Coordinates of a given flag on the default layout.
         """
-        for row in Board.flag_array:
-            r = Board.flag_array.index(row)
-            for flag_dec in row:
+        for r, row in enumerate(Board.flag_array):
+            for c, flag_dec in enumerate(row):
                 if flag in flag_dec[0]:
-                    c = row.index(flag_dec)
-                    return c, r
+                    return r, c
         return
 
 
