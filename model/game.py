@@ -86,4 +86,8 @@ class Game(object):
         self.cache = Cache(self.history)
 
     def __str__(self):
-        return str(self.cache.latest).replace('')
+        board_string = str(self.cache.latest)
+        for i, player in enumerate(self.players):
+            board_string.replace(f'p{i}b', player.emoji[0])
+            board_string.replace(f'p{i}', player.emoji[1])
+        return board_string

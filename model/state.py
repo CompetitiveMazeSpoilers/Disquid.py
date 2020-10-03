@@ -316,7 +316,7 @@ class Board(list):
         Converts the Board into a readable string that is sent
         to the discord client as 3 separate messages.
         """
-        emoji_string = ""
+        emoji_string = ''
         for i, (cell, flag) in enumerate(zip(self, Board.flag_array)):
             player = cell.player
             j = 0
