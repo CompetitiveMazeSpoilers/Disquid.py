@@ -265,7 +265,7 @@ class Move(object):
         if move_type == 'V':
             self.corner = corner
 
-    def execute(self, board: Board, *, validate):
+    def execute(self, board: Board, *, validate=False):
         if self.move_type == 'A':
             func = board.acquire
             func(**{k: v for k, v in self.__dict__.items() if k != 'type'}, validate=validate)
