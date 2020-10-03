@@ -4,9 +4,11 @@ import os
 from collections import deque
 from heapq import heappush, heappop
 from pathlib import Path
-from typing import List, Tuple
+from typing import Tuple
 
-default_board_file = Path('data/board.json')
+Flag = ([str], str)
+Position = Tuple[int, int]
+
 hardcoded_board = '(<gu)(<pm)(<gf)(<pg)(<mk)(<va)(<dz)(<kz)(<np)(vu)(cu)(om)(pr)(by)(sj)(dm)(gg)(ge)(mq)(>np)(>kz)(' \
                   '>dz)(>va)(>mk)(>pg)(>gf)(>pm)(>gu)\n(<bl)(<as)(<cd)(<tz)(<zm)(<pt)(<gt)(<kg)(<mo)(sx)(gw)(ph)(dj)(' \
                   'st)(is)(fo)(no)(ax)(bv)(>mo)(>kg)(>gt)(>pt)(>zm)(>tz)(>cd)(>as)(>bl)\n(<gd)(<gy)(<cg)(<bn)(<qa)(' \
@@ -30,9 +32,6 @@ hardcoded_board = '(<gu)(<pm)(<gf)(<pg)(<mk)(<va)(<dz)(<kz)(<np)(vu)(cu)(om)(pr)
                   '<na)(<kn)(<lk)(<tm)(<ic)(<sa)(<mp)(ss)(eh)(gq)(jo)(mz)(ch)(lr)(uy)(my)(tg)(>mp)(>sa)(>ic)(>tm)(' \
                   '>lk)(>kn)(>na)(>tl)(>vi)\n(<me)(<tk)(<bt)(<cx)(<re)(<mt)(<pk)(<cy)(<br)(za)(km)(zw)(cf)(ag)(gb)(' \
                   'us)(io)(um)(dg)(>br)(>cy)(>pk)(>mt)(>re)(>cx)(>bt)(>tk)(>me) '
-
-Flag = ([str], str)
-Position = Tuple[int, int]
 
 
 class Cell(object):
@@ -59,7 +58,11 @@ class Cell(object):
 
 
 def generate_flag_array() -> [[Flag]]:
-    if not os.path.exists(default_board_file):
+    """
+    Turns the hardcoded array into a Flag array and writes the .json file.
+    Can be overwritten by a .json file if it already exists.
+    """
+    if not os.path.exists(Board.default_board_file):
         string_split_arr = hardcoded_board.split('\n')
         string_2d_arr = []
         for string in string_split_arr:
@@ -78,11 +81,11 @@ def generate_flag_array() -> [[Flag]]:
                     flag_code = split_string[1]
                     temp_arr.append((aliases, f':{flag_code}:'))
             final_board_arr.append(temp_arr)
-        with open(default_board_file, 'w') as f:
+        with open(Board.default_board_file, 'w') as f:
             json.dump(final_board_arr, f, indent=4)
         return final_board_arr
 
-    with open(default_board_file, 'r') as f:
+    with open(Board.default_board_file, 'r') as f:
         return json.load(f)
 
 
@@ -107,6 +110,7 @@ class Board(list):
                          (0, 4), (1, 4), (2, 4), (3, 4)]
 
     flag_array: [[Flag]]
+    default_board_file = Path('data/board.json')
 
     def __init__(self, r: int, c: int, bases: [Position]):
         super().__init__()
@@ -205,7 +209,7 @@ class Board(list):
                         # conquer neighbour
                         self[adj[0]][adj[1]].player = player
                         q.append(adj)
-    
+
     def is_valid_vanquish(self, player, corner: Position) -> bool:
         """
         Checks whether a given vanquish is a valid move
