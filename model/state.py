@@ -15,7 +15,7 @@ hardcoded_board = '(<gu)(<pm)(<gf)(<pg)(<mk)(<va)(<dz)(<kz)(<np)(vu)(cu)(om)(pr)
                   'scotland)(>bi)(>mh)(>ba)\n(<nu)(<bm)(<to)(<ws)(<cp)(<td)(<be)(<aq)(<cn)(et)(si)(bo)(py)(ao)(ht)(' \
                   'ar)(pf)(ea)(hr)(>cn)(>aq)(>be)(>td)(>cp)(>ws)(>to)(>bm)(>nu)\n(<tf)(<ac)(<hm)(<vg)(<ie)(<pe)(<fr)(' \
                   '<lc)(<fm)(tj)(sy)(la)(bw)(bf)(gl)(gm)(az)(in)(eg)(>fm)(>lc)(>fr)(>pe)(>ie)(>vg)(>hm)(>ac)(>tf)\n(' \
-                  '<sh)(<ck)(<fk)(<ky)([plr1],player1)([plr1],player1)(<gn)(<bd)(<vn)(mu)(ru)(sl)(lt)(mc)(ua)(ye)(' \
+                  '<sh)(<ck)(<fk)(<ky)([plr1],player1)([plr1],player1)(<gn)(++<bd)(<vn)(mu)(ru)(sl)(lt)(mc)(ua)(ye)(' \
                   'am)(lu)(at)(>vn)(>bd)(>gn)([plr2],player2)([plr2],player2)(>ky)(>fk)(>ck)(>sh)\n(<pn)(<ms)(<nz)(' \
                   '<au)([plr1],player1)([plr1],player1)(<ci)(<jp)(<so)(lv)(hu)(nl)(ga)(pl)(id)(de)(ee)(bg)(co)(>so)(' \
                   '>jp)(>ci)([plr2],player2)([plr2],player2)(>au)(>nz)(>ms)(>pn)\n(<gs)(<ai)(<ta)(<tc)(<ml)(<ng)(' \
@@ -124,7 +124,7 @@ class Board(list):
         for dx, dy in Board.base_offsets:
             self[center[0] + dx][center[1] + dy].set_base(player)
 
-    def copy(self):
+    def deepcopy(self):
         cpy = Board(self.rows, self.cols, self.bases)
         for i in range(self.rows):
             for j in range(self.cols):
@@ -217,14 +217,14 @@ class Board(list):
 
         while pq:
             # current least-distance cell
-            pathlen, curr = heappop(pq)
+            path_len, curr = heappop(pq)
             visited[curr[0]][curr[1]] = True
             for i, j in self.adjacent(curr, base=True):
                 if not visited[i][j] and self[i][j].player == player:
                     # update unvisited neighbours for shorter path
-                    if dist[i][j] > pathlen + 1:
+                    if dist[i][j] > path_len + 1:
                         prev[i][j] = curr
-                        dist[i][j] = pathlen + 1
+                        dist[i][j] = path_len + 1
                         heappush(pq, (dist[i][j], (i, j)))
                 # trace path if found
                 if self[i][j].base and self[i][j].player == enemy:
@@ -268,18 +268,15 @@ class Move(object):
     def execute(self, board: Board, *, validate=False):
         if self.move_type == 'A':
             func = board.acquire
-            func(**{k: v for k, v in self.__dict__.items() if k != 'type'}, validate=validate)
         elif self.move_type == 'C':
             func = board.conquer
-            func(**{k: v for k, v in self.__dict__.items() if k != 'type'}, validate=validate)
         elif self.move_type == 'V':
             func = board.vanquish
-            func(**{k: v for k, v in self.__dict__.items() if k != 'type'}, validate=validate)
         elif self.move_type == 'Q':
             func = board.conquest
-            func(**{k: v for k, v in self.__dict__.items() if k != 'type'}, validate=validate)
         else:
             raise InvalidMove
+        func(**{k: v for k, v in self.__dict__.items() if k != 'type'}, validate=validate)
 
 
 class InvalidMove(Exception):
