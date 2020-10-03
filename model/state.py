@@ -8,6 +8,7 @@ from typing import Tuple
 
 Flag = ([str], str)
 Position = Tuple[int, int]
+EmojiSet = Tuple[str, str]
 
 hardcoded_board = '(<gu)(<pm)(<gf)(<pg)(<mk)(<va)(<dz)(<kz)(<np)(vu)(cu)(om)(pr)(by)(sj)(dm)(gg)(ge)(mq)(>np)(>kz)(' \
                   '>dz)(>va)(>mk)(>pg)(>gf)(>pm)(>gu)\n(<bl)(<as)(<cd)(<tz)(<zm)(<pt)(<gt)(<kg)(<mo)(sx)(gw)(ph)(dj)(' \
@@ -112,12 +113,13 @@ class Board(list):
     flag_array: [[Flag]]
     default_board_file = Path('data/board.json')
 
-    def __init__(self, r: int, c: int, bases: [Position]):
+    def __init__(self, r: int, c: int, bases: [Position], players: [Player]):
         super().__init__()
         self.rows = r
         self.cols = c
         self.append([Cell() for j in range(c)] for i in range(r))
         self.bases = bases
+        self.players = players
 
         self.make_base(1)
         self.make_base(2)
@@ -305,6 +307,10 @@ class Board(list):
         raise InvalidMove
 
     def __str__(self):
+        """
+        Converts the Board into a readable string that is sent
+        to the discord client as 3 seperate messages.
+        """
         emoji_string = ""
         for i, (cell, flag) in enumerate(zip(self, Board.flag_array)):
             player = cell.player

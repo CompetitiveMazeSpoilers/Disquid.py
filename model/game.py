@@ -1,6 +1,5 @@
 from model.memory import *
 
-
 class Utility:
 
     @staticmethod
@@ -51,15 +50,6 @@ class Utility:
                     return r, c
         return
 
-
-class Player:
-    """
-    Storage of a discord user that has interacted with the bot
-    or started and subsequently played a game of Conquid.
-    """
-
-    def __init__(self, p_id: int):
-        self.p_id = p_id
 
 
 class Challenge(object):
