@@ -261,7 +261,7 @@ class Board(list):
                 emoji_string += "\n"
                 j += 1
                 # add message breaks on 5th and 9th rows
-                if j == 5 or j == 9
+                if j == 5 or j == 9:
                     emoji_string += "#msg"
         return emoji_string
 
