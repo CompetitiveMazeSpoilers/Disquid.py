@@ -385,4 +385,7 @@ class Move(object):
 
 
 class InvalidMove(Exception):
+    """
+    Thrown when a Move is not able to be executed.
+    """
     pass
