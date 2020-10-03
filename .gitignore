@@ -131,7 +131,7 @@ dmypy.json
 *.json
 
 # Data files
-data/
-Data/
+data
 /Disquid.py.sln
 /Disquid.py.pyproj
+.idea
