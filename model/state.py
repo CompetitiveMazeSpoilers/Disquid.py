@@ -178,12 +178,11 @@ class Board(list):
         for loc in locs:
             self[loc[0]][loc[1]].player = player
 
-    def conquer(self, player: int, validate=False):
+    def conquer(self, player: int):
         """
         "Conquers" any space that is able to be conquered by the player.
         Condition for conquering is that two of one player's cells touch one of another player's.
         :param player: The player who is conquering.
-        :param validate: Empty formatting varialble, do not use.
         :return:
         """
         enemy = 3 - player
@@ -270,7 +269,7 @@ class Board(list):
         for sq in square:
             sq.player = 0
 
-    def conquest(self, player, validate=False):
+    def conquest(self, player):
         enemy = 3 - player
         # distance to player base
         dist = [[math.inf for j in range(self.cols)] for i in range(self.rows)]
@@ -362,18 +361,18 @@ class Move(object):
         if move_type == 'V':
             self.corner = corner
 
-    def execute(self, board: Board, *, validate=False):
+    def __call__(self, board: Board, *, validate=False):
         if self.move_type == 'A':
-            func = board.acquire
+            func = partial(board.acquire, validate=validate)
         elif self.move_type == 'C':
             func = board.conquer
         elif self.move_type == 'V':
-            func = board.vanquish
+            func = partial(board.vanquish, validate=validate)
         elif self.move_type == 'Q':
             func = board.conquest
         else:
             raise InvalidMove
-        func(**{k: v for k, v in self.__dict__.items() if k != 'type'}, validate=validate)
+        func(**{k: v for k, v in self.__dict__.items() if k != 'move_type'})
 
 
 class InvalidMove(Exception):
