@@ -20,15 +20,32 @@ class History(object):
         self.moves = moves
 
     def store(self, move):
+        """
+        Stores the given move.
+        """
         self.moves.append(move.__dict__)
 
     def is_finished(self):
+        """
+        Game finished check.
+        :return: if the given game is won by either player.
+        """
         return self.moves and self.moves[-1]['move_type'] == 'Q'
 
     def move_history(self):
+        """
+        Creates a move history and returns it.
+        :return: an array of moves with arr[0]
+        being the first move.
+        """
         return [Move(**mv) for mv in self.moves]
 
     def board_history(self):
+        """
+        Creates a board history and returns it.
+        :return an array of boards with arr[0]
+        being the inital board.
+        """
         # starting state
         board = Board(self.rows, self.cols, self.bases)
         # update boards with moves to generate list
@@ -63,8 +80,12 @@ class Cache(object):
         self.move = None
 
     def at_last_state(self, finish_allowed=True):
+        """
+        Checks if the cache represents a finalized game.
+        :return: if the cache represents a finalized game.
+        """
         return self.nstate == len(self.save) - 1 and \
-               (finish_allowed or not self.hist.is_finished())
+               finish_allowed or not self.hist.is_finished()
 
     # def play_back(self):
     #    if self.nstate > 0:
@@ -82,6 +103,9 @@ class Cache(object):
     #        self.boardview.set_view(self.save[self.nstate], self.current_player)
 
     def receive(self, move: Move):
+        """
+
+        """
         if self.move:
             return
         move(self.latest, validate=True)

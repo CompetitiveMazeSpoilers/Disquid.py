@@ -71,11 +71,19 @@ class Challenge(object):
 
 
 class Game(object):
-
+    """
+    A game class that contains all information about the game
+    it represents.
+    """
     standard_width = 28
     standard_height = 14
 
-    def __init__(self, players: [Player]):
+    def __init__(self, players: [Player], r: int = standard_height, c: int = standard_width):
         self.players = players
-        self.history = History(Game.standard_height, Game.standard_width)
+        base1 = ((r // 2) - 1, 5)
+        base2 = ((r // 2) - 1, (c - 1) - 5)
+        self.history = History(r, c, [base1, base2], [])
         self.cache = Cache(self.history)
+
+    def __str__(self):
+        return str(self.cache.latest).replace('')

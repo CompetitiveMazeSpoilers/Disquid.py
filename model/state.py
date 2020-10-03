@@ -2,6 +2,7 @@ import json
 import math
 import os
 from collections import deque
+from functools import partial
 from heapq import heappush, heappop
 from pathlib import Path
 from typing import Tuple
@@ -51,10 +52,12 @@ class Cell(object):
         self.base = base
 
     def set_base(self, player: int):
+        """Makes this cell into a base cell."""
         self.player = player
         self.base = True
 
     def copy(self):
+        """Deep copies this cell."""
         return Cell(self.player, self.base)
 
 
