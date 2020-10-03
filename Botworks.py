@@ -1,6 +1,7 @@
 from model.memory import *
 
 import discord
+from discord.ext import commands
 
 __version__ = 'v0.0.1a1'
 
@@ -12,21 +13,17 @@ __version__ = 'v0.0.1a1'
 """
 
 
-class DisquidClient(discord.Client):
+class DisquidClient(discord.ext.commands.Bot):
     """
     Main body for the Discord Client interface for the project.
     Documentation Quick Reference https://discordpy.readthedocs.io/en/latest/api.html#
     """
 
-    default_prefix = '.q'
+    default_prefix = '*'
     prefix_file = Path('data/prefixes.json')
 
     def __init__(self, **options):
-        """
-        Called when the class is created.
-        :param options: Options for super class.
-        """
-        super().__init__(**options)
+        super().__init__(self.get_prefix, **options)
         if not os.path.exists(self.prefix_file):
             os.mkdir(self.prefix_file.parents[0])
             with open(self.prefix_file, 'w') as f:
@@ -42,7 +39,7 @@ class DisquidClient(discord.Client):
         """
         try:
             return self.prefixes[guild.id]
-        except IndexError:  # in case of failure of the on_guild_join event
+        except KeyError:  # in case of failure of the on_guild_join event
             self.set_prefix(guild, self.default_prefix)
             return self.default_prefix
 
@@ -79,9 +76,10 @@ class DisquidClient(discord.Client):
         Likely used for start and stop game commands.
         :param message: Message Class found at https://discordpy.readthedocs.io/en/latest/api.html#message.
         """
+
         prefix = self.get_prefix(message.guild)
-        if self.is_ready() and prefix in message.content:
-            pass  # do stuff with the message
+        if self.is_ready() and prefix not in message.content:
+            pass
 
     async def on_guild_join(self, guild: discord.Guild):
         """
@@ -93,6 +91,12 @@ class DisquidClient(discord.Client):
     def on_exit(self):
         self.save_prefixes()
         exit()
+
+    ###COMMANDS###
+    @commands.command(name='challenge')
+    async def challenge(self, ctx):
+        pass
+
 
 
 if __name__ == '__main__':

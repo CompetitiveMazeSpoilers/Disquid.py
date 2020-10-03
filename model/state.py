@@ -30,9 +30,33 @@ hardcoded_board = '(<gu)(<pm)(<gf)(<pg)(<mk)(<va)(<dz)(<kz)(<np)(vu)(cu)(om)(pr)
                   '>lk)(>kn)(>na)(>tl)(>vi)\n(<me)(<tk)(<bt)(<cx)(<re)(<mt)(<pk)(<cy)(<br)(za)(km)(zw)(cf)(ag)(gb)(' \
                   'us)(io)(um)(dg)(>br)(>cy)(>pk)(>mt)(>re)(>cx)(>bt)(>tk)(>me) '
 default_board_file = Path('data/board.json')
-cell_emoji = ((":purple_square:",":purple_circle:"),(":green_square:",":green_circle:"))
 
 Flag = ([str], str)
+
+Position = Tuple[int, int]
+
+
+class Cell(object):
+    """
+    stores information about player and base status
+
+    player = 0 if empty
+    player = 1 or 2 respectively for player 1 or 2
+
+    base = False if its a normal gameplay cell
+    base = True if its in the base
+    """
+
+    def __init__(self, player: int = 0, base: bool = False):
+        self.player = player
+        self.base = base
+
+    def set_base(self, player: int):
+        self.player = player
+        self.base = True
+
+    def copy(self):
+        return Cell(self.player, self.base)
 
 
 def generate_flag_array() -> [[Flag]]:
@@ -63,34 +87,6 @@ def generate_flag_array() -> [[Flag]]:
         return json.load(f)
 
 
-flag_array = generate_flag_array()
-
-Position = Tuple[int, int]
-
-
-class Cell(object):
-    """
-    stores information about player and base status
-
-    player = 0 if empty
-    player = 1 or 2 respectively for player 1 or 2
-
-    base = False if its a normal gameplay cell
-    base = True if its in the base
-    """
-
-    def __init__(self, player: int = 0, base: bool = False):
-        self.player = player
-        self.base = base
-
-    def set_base(self, player: int):
-        self.player = player
-        self.base = True
-
-    def copy(self):
-        return Cell(self.player, self.base)
-
-
 class Board(list):
     """
     A representation of the state of the game and its transformations
@@ -111,7 +107,9 @@ class Board(list):
                          (0, -1), (1, -1), (2, -1), (3, -1),
                          (0, 4), (1, 4), (2, 4), (3, 4)]
 
-    def __init__(self, r, c, bases: [Position]):
+    flag_array: [[Flag]]
+
+    def __init__(self, r: int, c: int, bases: [Position]):
         super().__init__()
         self.rows = r
         self.cols = c
@@ -121,22 +119,42 @@ class Board(list):
         self.make_base(1)
         self.make_base(2)
 
+        Board.flag_array = generate_flag_array()
+
     def make_base(self, player: int):
+        """
+        Creates a new base.
+        :param player: The player that owns the base.
+        """
         center = self.bases[player - 1]
         for dx, dy in Board.base_offsets:
             self[center[0] + dx][center[1] + dy].set_base(player)
 
     def deepcopy(self):
+        """
+        Creates a completely new class with identical values.
+        :return: A new Board with the same values as the given instance.
+        """
         cpy = Board(self.rows, self.cols, self.bases)
         for i in range(self.rows):
             for j in range(self.cols):
                 cpy[i][j] = self[i][j].copy()
         return cpy
 
-    def is_valid_position(self, pos: Position):
+    def is_valid_position(self, pos: Position) -> bool:
+        """
+        Tests if the given position fits on the board.
+        :param pos: Position to test.
+        """
         return 0 <= pos[0] < self.rows and 0 <= pos[1] < self.cols
 
     def adjacent(self, center: Position, base=False):
+        """
+        Returns the adjacent cells.
+        :param center: The center of which to test adjacent cells.
+        :param base: Whether or not the given pos is a base.
+        :return: An adjacent cell using yield.
+        """
         for dx, dy in Board.adjacent_offsets:
             loc = (center[0] + dx, center[1] + dy)
             if self.is_valid_position(loc):
@@ -144,6 +162,12 @@ class Board(list):
                     yield loc
 
     def acquire(self, player, locs: List[Position], validate=False):
+        """
+        The acquire move.
+        :param player: The player who is acquiring.
+        :param locs: The locations of the acquired cells.
+        :param validate: Whether or not to validate if the move can be performed.
+        """
         if validate:
             for loc in locs:
                 if self[loc[0]][loc[1]].player != 0:
@@ -151,7 +175,14 @@ class Board(list):
         for loc in locs:
             self[loc[0]][loc[1]].player = player
 
-    def conquer(self, player, validate=False):
+    def conquer(self, player: int, validate=False):
+        """
+        "Conquers" any space that is able to be conquered by the player.
+        Condition for conquering is that two of one player's cells touch one of another player's.
+        :param player: The player who is conquering.
+        :param validate: Empty formatting varialble, do not use.
+        :return:
+        """
         enemy = 3 - player
         # player cells that touch enemy cell
         touching = [[0 for j in range(self.cols)] for i in range(self.rows)]
@@ -239,30 +270,30 @@ class Board(list):
 
     def __str__(self):
         emoji_string = ""
-        for i, cell, flag in enumerate(zip(self, flag_array)):
+        for i, cell, flag in enumerate(zip(self, Board.flag_array)):
             player = cell.player
             j = 0
-            emoji = ""
+            emoji = ''
             if player == 0:
                 # blank cell, use flag, add spoilers
-                emoji = "||" + flag[1] + "||"
+                emoji = '||' + flag[1] + '||'
             else:
                 # player cell
                 if cell.base:
                     # base
-                    emoji = cell_emoji[player-1][0]
+                    emoji = cell_emoji[player - 1][0]
                 else:
                     # nonbase
-                    emoji = cell_emoji[player-1][1]
+                    emoji = cell_emoji[player - 1][1]
             # add this cell's emoji to string
             emoji_string += emoji
             # if row end, add line break
-            if (i+1) % 28 == 0:
-                emoji_string += "\n"
+            if (i + 1) % 28 == 0:
+                emoji_string += '\n'
                 j += 1
                 # add message breaks on 5th and 9th rows
                 if j == 5 or j == 9:
-                    emoji_string += "#msg"
+                    emoji_string += '#msg'
         return emoji_string
 
 
