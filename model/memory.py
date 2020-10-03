@@ -32,10 +32,10 @@ class History(object):
         # starting state
         board = Board(self.rows, self.cols, self.bases)
         # update boards with moves to generate list
-        boards = [board.copy()]
+        boards: [Board] = [board.deepcopy()]
         for mv in self.moves:
             Move(**mv).execute(board)
-            boards.append(board.copy())
+            boards.append(board.deepcopy())
         return boards
 
 
@@ -59,7 +59,7 @@ class Cache(object):
         self.nstate = 0
         self.save = history.board_history()
         self.nstate = len(self.save) - 1
-        self.latest = self.save[-1].copy()
+        self.latest = self.save[-1].deepcopy()
         self.move = None
 
     def at_last_state(self, finish_allowed=True):
@@ -96,7 +96,7 @@ class Cache(object):
     def confirm(self):
         if not self.move:
             return
-        self.save.append(self.latest.copy())
+        self.save.append(self.latest.deepcopy())
         self.hist.store(self.move)
         self.nstate += 1
         self.current_player = 3 - self.current_player
