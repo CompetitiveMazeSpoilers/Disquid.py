@@ -129,3 +129,6 @@ dmypy.json
 .pyre/
 /.vs/
 *.json
+
+# Data files
+data/

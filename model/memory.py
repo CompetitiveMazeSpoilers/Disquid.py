@@ -1,6 +1,7 @@
 from model.state import *
 
-class History:
+
+class History(object):
     """
     Represents the entire history of moves and board states in a game
     To obtain a list of Boards in a game, call
@@ -11,6 +12,7 @@ class History:
     ***Remember, if a board is the (i)th state in the board history,
     then the last move done is the (i-1)th action in the move history
     """
+
     def __init__(self, rows, cols, bases, moves):
         self.rows = rows
         self.cols = cols
@@ -21,7 +23,7 @@ class History:
         self.moves.append(move.__dict__)
 
     def is_finished(self):
-        return self.moves and self.moves[-1]['type'] == 'Q'
+        return self.moves and self.moves[-1]['move_type'] == 'Q'
 
     def move_history(self):
         return [Move(**mv) for mv in self.moves]
@@ -36,7 +38,8 @@ class History:
             boards.append(board.copy())
         return boards
 
-class Cache:
+
+class Cache(object):
     """
     Stores the current Board state and current player.
     For a move to be executed, entered into history, and the turn to change, the following calls must be made:
@@ -58,6 +61,7 @@ class Cache:
         BoardView.set_player(self, <player>, win=False)
     thru which it receives the current player whose turn it is and whether they won yet.
     """
+
     def __init__(self, history: History):
         self.hist = history
         self.current_player = 1
@@ -65,7 +69,7 @@ class Cache:
         self.save = history.board_history()
         self.nstate = len(self.save) - 1
         self.latest = self.save[-1].copy()
-        self.move = None 
+        self.move = None
 
     def link_gui(self, controller: 'Controller', boardview: 'Boardview'):
         self.controller = controller
@@ -74,8 +78,8 @@ class Cache:
         boardview.set_player(self.current_player)
 
     def at_last_state(self, finish_allowed=True):
-        return self.nstate == len(self.save)-1 and \
-            (finish_allowed or not self.hist.is_finished())
+        return self.nstate == len(self.save) - 1 and \
+               (finish_allowed or not self.hist.is_finished())
 
     def play_back(self):
         if self.nstate > 0:
@@ -85,7 +89,7 @@ class Cache:
         self.boardview.set_player(self.current_player)
 
     def play_forward(self):
-        if self.nstate < len(self.save)-1:
+        if self.nstate < len(self.save) - 1:
             self.nstate += 1
             self.current_player = 3 - self.current_player
         self.boardview.set_view(self.save[self.nstate])
@@ -112,7 +116,7 @@ class Cache:
         self.hist.store(self.move)
         self.nstate += 1
         self.current_player = 3 - self.current_player
-        if self.move.type == 'Q':
+        if self.move.move_type == 'Q':
             self.controller.game_won()
             self.play_forward()
         else:

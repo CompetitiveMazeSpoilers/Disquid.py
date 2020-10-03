@@ -1,6 +1,7 @@
 import json
 import os
-import pathlib
+from pathlib import Path
+import model.state
 
 import discord
 
@@ -21,7 +22,7 @@ class DisquidClient(discord.Client):
     """
 
     default_prefix = '.q'
-    prefix_file = pathlib.Path('data/prefixes.json')
+    prefix_file = Path('data/prefixes.json')
 
     def __init__(self, **options):
         """
@@ -30,9 +31,13 @@ class DisquidClient(discord.Client):
         """
         super().__init__(**options)
         if not os.path.exists(self.prefix_file):
-            os.mkdir(self.prefix_file)
-        with open(self.prefix_file, 'r') as f:
-            self.prefixes: {str} = json.load(f)
+            os.mkdir(self.prefix_file.parents[0])
+            with open(self.prefix_file, 'w') as f:
+                json.dump({}, f)
+            self.prefixes: {str} = {}
+        else:
+            with open(self.prefix_file, 'r') as f:
+                self.prefixes: {str} = json.load(f)
 
     def get_prefix(self, guild: discord.Guild):
         """
@@ -41,6 +46,7 @@ class DisquidClient(discord.Client):
         try:
             return self.prefixes[guild.id]
         except IndexError:  # in case of failure of the on_guild_join event
+            self.set_prefix(guild, self.default_prefix)
             return self.default_prefix
 
     def set_prefix(self, guild: discord.Guild, prefix: str):
@@ -93,4 +99,4 @@ class DisquidClient(discord.Client):
 
 
 if __name__ == '__main__':
-    DisquidClient().start(input('Bot API Token: '))
+    DisquidClient().run(input('Bot API Token: '))
