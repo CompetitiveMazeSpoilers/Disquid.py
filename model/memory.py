@@ -34,7 +34,7 @@ class History(object):
         # update boards with moves to generate list
         boards: [Board] = [board.deepcopy()]
         for mv in self.moves:
-            Move(**mv).execute(board)
+            Move(**mv)(board)
             boards.append(board.deepcopy())
         return boards
 
@@ -84,7 +84,7 @@ class Cache(object):
     def receive(self, move: Move):
         if self.move:
             return
-        move.execute(self.latest, validate=True)
+        move(self.latest, validate=True)
         self.move = move
         self.confirm()
 
