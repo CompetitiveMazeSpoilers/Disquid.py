@@ -311,7 +311,7 @@ class Board(list):
     def __str__(self):
         """
         Converts the Board into a readable string that is sent
-        to the discord client as 3 seperate messages.
+        to the discord client as 3 separate messages.
         """
         emoji_string = ""
         for i, (cell, flag) in enumerate(zip(self, Board.flag_array)):
@@ -322,13 +322,11 @@ class Board(list):
                 # blank cell, use flag, add spoilers
                 emoji = '||' + flag[1] + '||'
             else:
-                # player cell
+                # player cell stand-in code
+                emoji = 'p' + player
                 if cell.base:
-                    # base
-                    emoji = player.emoji[0]
-                else:
-                    # nonbase
-                    emoji = player.emoji[1]
+                    # base stand-in code
+                    emoji += 'b'
             # add this cell's emoji to string
             emoji_string += emoji
             # if row end, add line break
