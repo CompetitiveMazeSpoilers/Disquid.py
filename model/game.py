@@ -32,6 +32,25 @@ class Player(object):
 
 
 class Utility:
+    
+    @staticmethod
+    def format_locations(locs: [Position], game: Game):
+
+        def emoji_at(i, j) -> str:
+            # helper function
+            board = game.cache.latest
+            player = board[i][j].player
+            if player == 0:
+                # blank cell, use flag, add spoilers
+                return '||' + Board.flag_array[i][j][1] + '||'
+            else:
+                # player cell stand-in code
+                return game.players[player-1].emoji[player-1][0]
+
+        result = ''
+        for i, (r, c) in enumerate(locs, 1):
+            result += f'\'{i}: \'' + emoji_at(r,c) + f', R{r}, C{c}\n'
+        return result
 
     @staticmethod
     def read_move(player: int, action_text) -> Move:

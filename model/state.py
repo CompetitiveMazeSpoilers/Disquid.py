@@ -212,6 +212,10 @@ class Board(list):
                         self[adj[0]][adj[1]].player = player
                         q.append(adj)
 
+    def vanquish_spots(self, player: int):
+        return [(i,j) for i in range(self.rows) for j in range(self.cols) 
+                if self.is_valid_vanquish(player, (i,j))]
+
     def is_valid_vanquish(self, player: int, corner: Position) -> bool:
         """
         Checks whether a given vanquish is a valid move

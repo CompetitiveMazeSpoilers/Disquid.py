@@ -356,13 +356,13 @@ class DisquidClient(discord.Client):
         else:
             if message.channel.id not in self.active_games:
                 return
+            game = self.active_games[message.channel.id]
+            cache = game.cache
+            if not message.author.id == game.players[game.cache.current_player-1].uid:
+                await message.channel.send('Not your turn!')
+                return
             try:
-                game = self.active_games[message.channel.id]
-                if not message.author.id == game.players[game.cache.current_player-1].uid:
-                    await message.channel.send('Not your turn!')
-                    return
                 move = Utility.read_move(game.cache.current_player, message.content)
-                cache = game.cache
                 cache.receive(move)
                 await message.channel.send('Move Success!')
                 # Test for win condition
@@ -373,8 +373,13 @@ class DisquidClient(discord.Client):
                 cache.move = None
                 await message.channel.send(f'It is now <@{game.players[game.cache.current_player - 1].uid}>\'s turn.')
             except InvalidMove:
-                await message.channel.send(
-                    f'Not a valid move! Use \'{prefix}help moves\' to get help.')
+                prefix = message.content.split()[0]
+                if prefix == 'V':
+                    vanq_spots: str = Utility.format_locations(cache.latest.vanquish_spots(cache.current_player), cache.latest)
+                    await message.channel.send('Vanquish options:\n' + vanq_spots)
+                else:
+                    await message.channel.send(
+                        f'Not a valid move! Use \'{prefix}help moves\' to get help.')
 
     async def on_guild_join(self, guild: discord.Guild):
         """
