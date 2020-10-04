@@ -208,8 +208,13 @@ class DisquidClient(discord.Client):
                     if temp_chal == c:
                         channel = message.channel
                         guild = channel.guild
+                        category = None
+                        for ca in guild.categories:
+                            if c.id == channel.category_id:
+                                category = ca
+                                break
                         try:
-                            channel = await guild.create_text_channel(f'{c.p1.name}-v-{c.p2.name}')
+                            channel = await guild.create_text_channel(f'{c.p1.name}-v-{c.p2.name}', category=category)
                         except discord.errors.Forbidden:
                             await self.get_channel(message.channel.id).send(
                                 'I don\'t have permissions to create game channels!')
