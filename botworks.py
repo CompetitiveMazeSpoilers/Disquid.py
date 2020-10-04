@@ -66,6 +66,7 @@ class DisquidClient(discord.Client):
         267792207942123530,
         285827256788451328
     ]
+    debug_guild = 762071050007609344
 
     def __init__(self, prefix_file_name: str = 'prefixes', player_file_name: str = 'players',
                  game_file_name: str = 'games', history_file_name: str = 'history', **options):
@@ -300,10 +301,15 @@ class DisquidClient(discord.Client):
             """
             Uploads attachment as emoji
             """
-            image = await message.attachments[0].read()
-            player_name = self.get_player(message.author.id).name
-            await message.guild.create_custom_emoji(name=player_name, image=image)
-            await message.channel.send(f'New emoji :{player_name}: uploaded')
+            attachments = message.attachments
+            if len(attachments) == 0:
+                await message.channel.send('No image provided')
+            else:
+                image = await attachments[0].read()
+                player_name = self.get_player(message.author.id).name
+                d_guild = self.get_guild(self.debug_guild)
+                final_emoji = await message.d_guild.create_custom_emoji(name=player_name, image=image)
+                await message.channel.send(f'New emoji :{final_emoji}: uploaded')
 
         cmds = {
             'challenge': Command(challenge,
