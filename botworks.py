@@ -189,7 +189,7 @@ class DisquidClient(discord.Client):
         Put any startup actions here.
         """
         print(f'Disquid {__version__} ready to play.')
-        await self.get_channel(759944461970046976).send(f'Disquid {__version__} ready to test.')  # Test channel
+        await self.get_channel(762071050522984470).send(f'Disquid {__version__} ready to test.')  # Test channel
 
     async def on_message(self, message: discord.Message):
         """
@@ -213,8 +213,9 @@ class DisquidClient(discord.Client):
 
                 async def del_challenge():
                     await asyncio.sleep(30)
-                    await message.channel.send(f'Challenge between {chal.p1.name} and {chal.p2.name} expired.')
-                    self.active_challenges.remove(chal)
+                    if chal in self.active_challenges:
+                        await message.channel.send(f'Challenge between {chal.p1.name} and {chal.p2.name} expired.')
+                        self.active_challenges.remove(chal)
 
                 self.active_challenges.append(Challenge(self.get_player(p1_id), self.get_player(p2_id)))
                 asyncio.run_coroutine_threadsafe(del_challenge(), asyncio.get_event_loop())
@@ -363,8 +364,8 @@ class DisquidClient(discord.Client):
                 return
             try:
                 game = self.active_games[message.channel.id]
-                if not message.author.id == game.players[game.cache.current_player.uid]:
-                    await message.channel.send('Challenger needs to start the game!')
+                if not message.author.id == game.players[game.cache.current_player-1].uid:
+                    await message.channel.send('Not your turn!')
                     return
                 move = Utility.read_move(game.cache.current_player, message.content)
                 cache = game.cache
@@ -376,6 +377,7 @@ class DisquidClient(discord.Client):
                 await self.update_board(game)
                 cache.current_player = 3 - cache.current_player
                 cache.move = None
+                await message.channel.send(f'It is now <@{game.players[game.cache.current_player - 1].uid}>\'s turn.')
             except InvalidMove:
                 await message.channel.send(
                     f'Not a valid move! Use \'{prefix}help moves\' to get help.')
@@ -392,11 +394,10 @@ class DisquidClient(discord.Client):
         await channel.send('Incoming Board!')
         for substring in str(game).split('#msg'):
             await channel.send(substring)
-        await channel.send(f'It is now <@{game.players[game.cache.current_player - 1].uid}>\'s turn.')
 
     async def on_win(self, game):
         channel = self.get_channel(game.channel_id)
-        await channel.send(f'<@{game.players[game.cache.current_player].uid}> WINS!')
+        await channel.send(f'<@{game.players[game.cache.current_player - 1].uid}> WINS!')
 
         async def channel_del(chl):
             await chl.delete(reason='Game Complete')
