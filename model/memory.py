@@ -1,3 +1,5 @@
+import discord
+
 from model.state import *
 
 
@@ -102,7 +104,7 @@ class Cache(object):
     #    else:
     #        self.boardview.set_view(self.save[self.nstate], self.current_player)
 
-    def receive(self, move: Move):
+    def receive(self, client, move: Move):
         """
         Turns a move into an updated cache.
         """
@@ -110,26 +112,14 @@ class Cache(object):
             return
         move(self.latest, validate=True)
         self.move = move
-        self.confirm()
-
-    # def discard_change(self):
-    #    self.latest = self.save[-1].copy()
-    #    self.boardview.set_view(self.latest)
-    #    self.move = None
-
-    def confirm(self):
-        """
-        Confirm the latest move and test for a win condition.
-        """
+        # Confirm the latest move and test for a win condition.
         if not self.move:
             return
         self.save.append(self.latest.deepcopy())
         self.hist.store(self.move)
         self.nstate += 1
-        self.current_player = 3 - self.current_player
-        if self.move.move_type == 'Q':
-            self.controller.game_won()
-            self.boardview.set_view(self.latest, 3 - self.current_player, win=True)
-        else:
-            self.boardview.view_player(self.latest, self.current_player)
-        self.move = None
+
+    # def discard_change(self):
+    #    self.latest = self.save[-1].copy()
+    #    self.boardview.set_view(self.latest)
+    #    self.move = None

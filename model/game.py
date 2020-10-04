@@ -1,15 +1,40 @@
-import discord
-
 from model.memory import *
 
 EmojiSet = Tuple[str, str]
 EmojiArray = Tuple[EmojiSet, EmojiSet]
 
 
+class Player(object):
+    """
+    Represents a player's profile, which is linked to every game they participate in.
+    Contains information such as:
+    - player id
+    - rank
+    - main/secondary emoji for base/territory
+    - name acronym
+    """
+
+    default_emoji: EmojiArray = [[':red_square:', ':red_circle:'], [':blue_square:', ':blue_circle:']]
+
+    def __init__(self, uid: int, rank: int, emoji: EmojiArray = default_emoji, name: str = 'dft'):
+        self.uid = uid
+        self.rank = rank
+        self.emoji = emoji
+        self.name = name
+
+    def __eq__(self, other):
+        if isinstance(other, Player):
+            return self.uid == other.uid
+        if isinstance(other, int):
+            return self.uid == other
+        else:
+            return NotImplemented
+
+
 class Utility:
 
     @staticmethod
-    def read_move(player, action_text) -> Move:
+    def read_move(player: int, action_text) -> Move:
         """
         Turns text into a move.
         :param action_text: Text that should be converted.
@@ -18,7 +43,7 @@ class Utility:
         """
         args = action_text.split()
         prefix = args[0]
-        player_num = player.id_num
+        player_num = player
         del args[0]
 
         # acquire
@@ -55,33 +80,6 @@ class Utility:
                 if flag in flag_dec[0]:
                     return r, c
         return
-
-
-class Player(object):
-    """
-    Represents a player's profile, which is linked to every game they participate in.
-    Contains information such as:
-    - player id
-    - rank
-    - main/secondary emoji for base/territory
-    - name acronym
-    """
-
-    default_emoji: EmojiArray = [[':red_square:', ':red_circle:'], [':blue_square:', ':blue_circle:']]
-
-    def __init__(self, uid: int, rank: int, emoji: EmojiArray = default_emoji, name: str = 'dft'):
-        self.uid = uid
-        self.rank = rank
-        self.emoji = emoji
-        self.name = name
-
-    def __eq__(self, other):
-        if isinstance(other, Player):
-            return self.uid == other.uid
-        if isinstance(other, int):
-            return self.uid == other
-        else:
-            return NotImplemented
 
 
 class Challenge(object):
@@ -125,9 +123,17 @@ class Game(object):
     def __str__(self):
         board_string = str(self.cache.latest)
         for i, player in enumerate(self.players):
-            board_string.replace(f'p{i}b', player.emoji[0])
-            board_string.replace(f'p{i}', player.emoji[1])
+            board_string = board_string.replace(f'p{i + 1}b', player.emoji[i][1])
+            board_string = board_string.replace(f'p{i + 1}', player.emoji[i][0])
         return board_string
+
+    def __eq__(self, other):
+        if isinstance(other, Game):
+            return self.channel_id == other.channel_id
+        if isinstance(other, int):
+            return self.channel_id == other
+        else:
+            return NotImplemented
 
 
 class InvalidGameSetup(Exception):

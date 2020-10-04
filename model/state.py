@@ -32,7 +32,7 @@ hardcoded_board = '(<gu)(<pm)(<gf)(<pg)(<mk)(<va)(<dz)(<kz)(<np)(vu)(cu)(om)(pr)
                   'ps)(kw)(ae)(sd)(gp)(sz)(do)(gr)(cl)(pa)(>cc)(>al)(>mx)(>ad)(>bh)(>tt)(>sb)(>er)(>yt)\n(<vi)(<tl)(' \
                   '<na)(<kn)(<lk)(<tm)(<ic)(<sa)(<mp)(ss)(eh)(gq)(jo)(mz)(ch)(lr)(uy)(my)(tg)(>mp)(>sa)(>ic)(>tm)(' \
                   '>lk)(>kn)(>na)(>tl)(>vi)\n(<me)(<tk)(<bt)(<cx)(<re)(<mt)(<pk)(<cy)(<br)(za)(km)(zw)(cf)(ag)(gb)(' \
-                  'us)(io)(um)(dg)(>br)(>cy)(>pk)(>mt)(>re)(>cx)(>bt)(>tk)(>me) '
+                  'us)(io)(um)(dg)(>br)(>cy)(>pk)(>mt)(>re)(>cx)(>bt)(>tk)(>me)'
 
 
 class Cell(object):
@@ -316,28 +316,26 @@ class Board(list):
         to the discord client as 3 separate messages.
         """
         emoji_string = ''
-        for i, (cell, flag) in enumerate(zip(self, Board.flag_array)):
-            player = cell.player
-            j = 0
-            emoji = ''
-            if player == 0:
-                # blank cell, use flag, add spoilers
-                emoji = '||' + flag[1] + '||'
-            else:
-                # player cell stand-in code
-                emoji = 'p' + player
-                if cell.base:
-                    # base stand-in code
-                    emoji += 'b'
-            # add this cell's emoji to string
-            emoji_string += emoji
-            # if row end, add line break
-            if (i + 1) % 28 == 0:
-                emoji_string += '\n'
-                j += 1
-                # add message breaks on 5th and 9th rows
-                if j == 5 or j == 9:
-                    emoji_string += '#msg'
+        for j, (cell_row, flag_row) in enumerate(zip(self, Board.flag_array)):
+            for i, (cell, flag) in enumerate(zip(cell_row, flag_row)):
+                player = cell.player
+                if player == 0:
+                    # blank cell, use flag, add spoilers
+                    emoji = '||' + flag[1] + '||'
+                else:
+                    # player cell stand-in code
+                    emoji = 'p' + str(player)
+                    if cell.base:
+                        # base stand-in code
+                        emoji += 'b'
+                # add this cell's emoji to string
+                emoji_string += emoji
+                # if row end, add line break
+                if i == 27:
+                    emoji_string += '\n'
+                    # add message breaks on 5th and 9th rows
+                    if j == 4 or j == 8:
+                        emoji_string += '#msg'
         return emoji_string
 
 
