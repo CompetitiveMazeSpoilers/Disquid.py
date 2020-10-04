@@ -287,6 +287,16 @@ class DisquidClient(discord.Client):
             else:
                 await self.get_channel(msg.channel.id).send('Insufficient user permissions.')
 
+        async def upload_emoji(msg):
+            """
+            Uploads attachment as emoji
+            :param msg: The message by which the command was sent.
+            """
+            image = msg.attachments[0]
+            player_name = self.get_player(msg.author.id)
+            msg.guild.create_custom_emoji(player_name, image)
+            msg.channel.send(f'New emoji :{player_name}: uploaded')
+
         cmds = {
             'challenge': Command(challenge,
                                  'Challenge another player by running this command and mentioning them in the '
@@ -295,7 +305,8 @@ class DisquidClient(discord.Client):
                               'Accept another player\'s challenge by running this command and mentioning them in '
                               'the same message'),
             'start': Command(start, 'Start a game once in a game channel that has been setup successfully.'),
-            'exit': Command(on_exit, 'Shut down the bot.')
+            'exit': Command(on_exit, 'Shut down the bot.'),
+            'upload': Command(upload_emoji, 'Upload attached image as custom emoji')
         }
 
         async def help_command(msg):
