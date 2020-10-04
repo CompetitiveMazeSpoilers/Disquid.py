@@ -104,7 +104,7 @@ class Cache(object):
 
     def receive(self, move: Move):
         """
-
+        Turns a move into an updated cache.
         """
         if self.move:
             return
@@ -118,6 +118,9 @@ class Cache(object):
     #    self.move = None
 
     def confirm(self):
+        """
+        Confirm the latest move and test for a win condition.
+        """
         if not self.move:
             return
         self.save.append(self.latest.deepcopy())

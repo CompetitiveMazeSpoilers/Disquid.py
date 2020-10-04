@@ -1,4 +1,9 @@
+import discord
+
 from model.memory import *
+
+EmojiSet = Tuple[str, str]
+EmojiArray = Tuple[EmojiSet, EmojiSet]
 
 
 class Utility:
@@ -52,6 +57,33 @@ class Utility:
         return
 
 
+class Player(object):
+    """
+    Represents a player's profile, which is linked to every game they participate in.
+    Contains information such as:
+    - player id
+    - rank
+    - main/secondary emoji for base/territory
+    - name acronym
+    """
+
+    default_emoji: EmojiArray = [[':red_square:', ':red_circle:'], [':blue_square:', ':blue_circle:']]
+
+    def __init__(self, uid: int, rank: int, emoji: EmojiArray = default_emoji, name: str = 'dft'):
+        self.uid = uid
+        self.rank = rank
+        self.emoji = emoji
+        self.name = name
+
+    def __eq__(self, other):
+        if isinstance(other, Player):
+            return self.uid == other.uid
+        if isinstance(other, int):
+            return self.uid == other
+        else:
+            return NotImplemented
+
+
 class Challenge(object):
     """
     Object created when one player wishes to start a game with another.
@@ -78,11 +110,16 @@ class Game(object):
     standard_width = 28
     standard_height = 14
 
-    def __init__(self, players: [Player], r: int = standard_height, c: int = standard_width):
+    def __init__(self, channel_id: discord.TextChannel.id, players: [Player], r: int = standard_height,
+                 c: int = standard_width, bases: [Position] = None):
+        self.channel_id = channel_id
         self.players = players
-        base1 = ((r // 2) - 1, 5)
-        base2 = ((r // 2) - 1, (c - 1) - 5)
-        self.history = History(r, c, [base1, base2], [])
+        if not bases:
+            if r == Game.standard_height and c == Game.standard_width:
+                bases = [((r // 2) - 1, 5), ((r // 2) - 1, (c - 1) - 5)]
+            else:
+                raise InvalidGameSetup
+        self.history = History(r, c, bases, [])
         self.cache = Cache(self.history)
 
     def __str__(self):
@@ -91,3 +128,7 @@ class Game(object):
             board_string.replace(f'p{i}b', player.emoji[0])
             board_string.replace(f'p{i}', player.emoji[1])
         return board_string
+
+
+class InvalidGameSetup(Exception):
+    pass

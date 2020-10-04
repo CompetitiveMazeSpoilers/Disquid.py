@@ -9,7 +9,6 @@ from typing import Tuple
 
 Flag = ([str], str)
 Position = Tuple[int, int]
-EmojiSet = Tuple[str, str]
 
 hardcoded_board = '(<gu)(<pm)(<gf)(<pg)(<mk)(<va)(<dz)(<kz)(<np)(vu)(cu)(om)(pr)(by)(sj)(dm)(gg)(ge)(mq)(>np)(>kz)(' \
                   '>dz)(>va)(>mk)(>pg)(>gf)(>pm)(>gu)\n(<bl)(<as)(<cd)(<tz)(<zm)(<pt)(<gt)(<kg)(<mo)(sx)(gw)(ph)(dj)(' \
@@ -20,7 +19,7 @@ hardcoded_board = '(<gu)(<pm)(<gf)(<pg)(<mk)(<va)(<dz)(<kz)(<np)(vu)(cu)(om)(pr)
                   'scotland)(>bi)(>mh)(>ba)\n(<nu)(<bm)(<to)(<ws)(<cp)(<td)(<be)(<aq)(<cn)(et)(si)(bo)(py)(ao)(ht)(' \
                   'ar)(pf)(ea)(hr)(>cn)(>aq)(>be)(>td)(>cp)(>ws)(>to)(>bm)(>nu)\n(<tf)(<ac)(<hm)(<vg)(<ie)(<pe)(<fr)(' \
                   '<lc)(<fm)(tj)(sy)(la)(bw)(bf)(gl)(gm)(az)(in)(eg)(>fm)(>lc)(>fr)(>pe)(>ie)(>vg)(>hm)(>ac)(>tf)\n(' \
-                  '<sh)(<ck)(<fk)(<ky)([plr1],player1)([plr1],player1)(<gn)(++<bd)(<vn)(mu)(ru)(sl)(lt)(mc)(ua)(ye)(' \
+                  '<sh)(<ck)(<fk)(<ky)([plr1],player1)([plr1],player1)(<gn)(<bd)(<vn)(mu)(ru)(sl)(lt)(mc)(ua)(ye)(' \
                   'am)(lu)(at)(>vn)(>bd)(>gn)([plr2],player2)([plr2],player2)(>ky)(>fk)(>ck)(>sh)\n(<pn)(<ms)(<nz)(' \
                   '<au)([plr1],player1)([plr1],player1)(<ci)(<jp)(<so)(lv)(hu)(nl)(ga)(pl)(id)(de)(ee)(bg)(co)(>so)(' \
                   '>jp)(>ci)([plr2],player2)([plr2],player2)(>au)(>nz)(>ms)(>pn)\n(<gs)(<ai)(<ta)(<tc)(<ml)(<ng)(' \
@@ -113,14 +112,14 @@ class Board(list):
                          (0, -1), (1, -1), (2, -1), (3, -1),
                          (0, 4), (1, 4), (2, 4), (3, 4)]
 
-    flag_array: [[Flag]]
     default_board_file = Path('data/board.json')
+    flag_array: [[Flag]]
 
     def __init__(self, r: int, c: int, bases: [Position]):
         super().__init__()
         self.rows = r
         self.cols = c
-        self.append([Cell() for j in range(c)] for i in range(r))
+        self.extend([[Cell() for j in range(c)] for i in range(r)])
         self.bases = bases
 
         self.make_base(1)
