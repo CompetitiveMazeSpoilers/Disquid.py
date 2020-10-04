@@ -114,7 +114,7 @@ class Game(object):
         self.players = players
         if not bases:
             if r == Game.standard_height and c == Game.standard_width:
-                bases = [((r // 2) - 1, 5), ((r // 2) - 1, (c - 1) - 5)]
+                bases = [((r // 2) - 1, 4), ((r // 2) - 1, (c - 1) - 5)]
             else:
                 raise InvalidGameSetup
         self.history = History(r, c, bases, [])
