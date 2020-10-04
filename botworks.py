@@ -36,9 +36,9 @@ DEALINGS IN THE SOFTWARE.
 
 class Command(object):
 
-    def __init__(self, func: Callable, help_msg: str = 'No help message defined.'):
+    def __init__(self, func: Callable, help_message: str = 'No help message defined.'):
         self.func = func
-        self.help_msg = help_msg
+        self.help_message = help_message
 
     def __eq__(self, other):
         if isinstance(other, Command):
@@ -49,7 +49,7 @@ class Command(object):
             return NotImplemented
 
     def __str__(self):
-        return self.help_msg
+        return self.help_message
 
 
 class DisquidClient(discord.Client):
@@ -200,35 +200,40 @@ class DisquidClient(discord.Client):
         if message.author.id == self.user.id:
             return
 
-        async def challenge(msg: discord.Message):
+        async def challenge():
             """
             Initiates a challenge against another player.
-            :param msg: The message by which the command was sent.
             """
-            p1_id = msg.author.id
-            mentions: [discord.Member] = msg.mentions
+            p1_id = message.author.id
+            mentions: [discord.Member] = message.mentions
             if len(mentions) == 1:
                 p2_id = mentions[0].id
                 chal = Challenge(self.get_player(p1_id), self.get_player(p2_id))
+
+                async def del_challenge():
+                    await asyncio.sleep(30)
+                    await message.channel.send(f'Challenge between {chal.p1.name} and {chal.p2.name}')
+                    self.active_challenges.remove(chal)
+
                 self.active_challenges.append(Challenge(self.get_player(p1_id), self.get_player(p2_id)))
-                await self.get_channel(msg.channel.id).send(f'{chal.p1.name} challenges {chal.p2.name}')
+                asyncio.run_coroutine_threadsafe(del_challenge(), asyncio.get_event_loop())
+                await message.channel.send(f'{chal.p1.name} challenges {chal.p2.name}')
             else:
-                await self.get_channel(msg.channel.id).send('Too many or too few players mentioned, '
+                await message.channel.send('Too many or too few players mentioned, '
                                                             'challenge failed.')
 
-        async def accept(msg: discord.Message):
+        async def accept():
             """
             Accepts an existing challenge from another user.
-            :param msg: The message by which the command was sent.
             """
-            p2_id = msg.author.id
-            mentions: [discord.Member] = msg.mentions
+            p2_id = message.author.id
+            mentions: [discord.Member] = message.mentions
             if len(mentions) == 1:
                 p1_id = mentions[0].id
                 temp_chal = Challenge(self.get_player(p1_id), self.get_player(p2_id))
                 for c in self.active_challenges:
                     if temp_chal == c:
-                        channel = msg.channel
+                        channel = message.channel
                         guild = channel.guild
                         category = None
                         for ca in guild.categories:
@@ -238,30 +243,34 @@ class DisquidClient(discord.Client):
                         try:
                             channel = await guild.create_text_channel(f'{c.p1.name}-v-{c.p2.name}', category=category)
                         except discord.errors.Forbidden:
-                            await self.get_channel(msg.channel.id).send(
+                            await message.channel.send(
                                 'I don\'t have permissions to create game channels!')
                             return
                         try:
                             new_game = Game(channel.id, [c.p1, c.p2])
                             self.active_games[channel.id] = new_game
                         except InvalidGameSetup:
-                            await self.get_channel(msg.channel.id).send('Invalid game setup... aborting.')
+                            await message.channel.send('Invalid game setup... aborting.')
                             return
-                        await self.get_channel(msg.channel.id).send(
+                        await message.channel.send(
                             f'Challenge accepted! Game started in <#{channel.id}>')
                         await self.get_channel(channel.id).send(
                             f'Game creation success! Welcome to Conquid!. Type {prefix}start to begin.')
                         self.active_challenges.remove(c)
 
             else:
-                await self.get_channel(msg.channel.id).send('Too many or too few players mentioned, '
+                await message.channel.send('Too many or too few players mentioned, '
                                                             'accept failed.')
 
-        async def start(msg):
-            channel_id = msg.channel.id
+        async def start():
+            """
+            Starts a game in an active game channel.
+            """
+            channel_id = message.channel.id
             target_game = self.active_games[channel_id]
             if target_game:
-                if not msg.author.id == target_game.players[0].uid:
+                if not message.author.id == target_game.players[0].uid:
+                    await message.channel.send('Challenger needs to start the game!')
                     return
                 await self.get_channel(channel_id).send('Incoming Board!')
                 board_string = str(target_game)
@@ -273,19 +282,18 @@ class DisquidClient(discord.Client):
                 return
             await self.get_channel(channel_id).send(f'No waiting game found, please use {prefix}challenge to make one.')
 
-        async def on_exit(msg):
+        async def on_exit():
             """
             Called to exit the bot.
-            :param msg: The message by which the command was sent.
             """
-            if msg.author.id in DisquidClient.admins:
+            if message.author.id in DisquidClient.admins:
                 self.save_prefixes()
                 self.save_players()
                 self.save_prefixes()
-                await self.get_channel(msg.channel.id).send('Shutting down.')
+                await message.channel.send('Shutting down.')
                 exit()
             else:
-                await self.get_channel(msg.channel.id).send('Insufficient user permissions.')
+                await message.channel.send('Insufficient user permissions.')
 
         cmds = {
             'challenge': Command(challenge,
@@ -298,45 +306,54 @@ class DisquidClient(discord.Client):
             'exit': Command(on_exit, 'Shut down the bot.')
         }
 
-        async def help_command(msg):
-            processed_msg = str(msg.content).split(' ')
-            if len(processed_msg) == 1:
+        async def help_command():
+            """
+            Provides descriptions of commands.
+            """
+            processed_message = str(message.content).split(' ')
+            if len(processed_message) == 1:
                 help_string = '```diff\nHelp Commands:'
                 for key in cmds:
                     help_string += '\n+'
                     help_string += str(key) + ': '
                     help_string += str(cmds[key])
                 help_string += '```'
-                await self.get_channel(msg.channel.id).send(help_string)
+                await message.channel.send(help_string)
             else:
-                if processed_msg[1] == 'moves':
-                    await self.get_channel(msg.channel.id).send(
+                if processed_message[1] == 'moves':
+                    await message.channel.send(
                         'A -- Aquire, this move claims 3 cells given as arguments with flag codes (eg. :flag_us: -> '
-                        'us).\n '
+                        'us).\n'
                         'V -- Vanquish, this move is used to clear a 4x4 area of an enermy cells as long as 4 of the '
-                        'attempting player\'s own cells touch the region.\n '
+                        'attempting player\'s own cells touch the region.\n'
                         'C -- Conquer, this move claims all enemy cells that touch 2 of the attemting player\'s '
-                        'cells.\n '
-                        'Q -- Conquest, this move is required to win the game, used when the attempting player '
+                        'cells.\n'
+                        'Q -- Conquest, this move is required to win the game, used when the attempting player'
                         'believes they have a path to the enemy base.')
                 else:
-                    await self.get_channel(msg.channel.id).send('No help found.')
+                    await message.channel.send('No help found.')
 
         cmds['help'] = Command(help_command, 'This command.')
 
         prefix = self.get_prefix(message.guild.id)
         if self.is_ready() and prefix == message.content[0]:
             command = str(message.content).strip(prefix).split(' ')[0]
-            await cmds[command].func(message)
+            try:
+                await cmds[command].func(message)
+            except KeyError:
+                print('User tried nonexistent command')
         else:
             if message.channel.id not in self.active_games:
                 return
             try:
                 game = self.active_games[message.channel.id]
+                if not message.author.id == game.players[game.cache.current_player.uid]:
+                    await message.channel.send('Challenger needs to start the game!')
+                    return
                 move = Utility.read_move(game.cache.current_player, message.content)
                 cache = game.cache
-                await self.get_channel(message.channel.id).send('Move Success!')
                 cache.receive(move)
+                await message.channel.send('Move Success!')
                 # Test for win condition
                 if cache.move.move_type == 'Q':
                     await self.on_win(game)
@@ -344,7 +361,7 @@ class DisquidClient(discord.Client):
                 cache.current_player = 3 - cache.current_player
                 cache.move = None
             except InvalidMove:
-                await self.get_channel(message.channel.id).send(
+                await message.channel.send(
                     f'Not a valid move! Use \'{prefix}help moves\' to get help.')
 
     async def on_guild_join(self, guild: discord.Guild):
@@ -357,7 +374,7 @@ class DisquidClient(discord.Client):
     async def update_board(self, game):
         channel = self.get_channel(game.channel_id)
         await channel.send('Incoming Board!')
-        for substring in str(game):
+        for substring in str(game).split('#msg'):
             await channel.send(substring)
         await channel.send(f'It is now <@{game.players[game.cache.current_player - 1].uid}>\'s turn.')
 
