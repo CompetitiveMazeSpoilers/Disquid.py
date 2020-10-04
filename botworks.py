@@ -212,7 +212,7 @@ class DisquidClient(discord.Client):
 
                 async def del_challenge():
                     await asyncio.sleep(30)
-                    await message.channel.send(f'Challenge between {chal.p1.name} and {chal.p2.name}')
+                    await message.channel.send(f'Challenge between {chal.p1.name} and {chal.p2.name} expired.')
                     self.active_challenges.remove(chal)
 
                 self.active_challenges.append(Challenge(self.get_player(p1_id), self.get_player(p2_id)))
@@ -295,15 +295,14 @@ class DisquidClient(discord.Client):
             else:
                 await message.channel.send('Insufficient user permissions.')
 
-        async def upload_emoji(msg):
+        async def upload_emoji():
             """
             Uploads attachment as emoji
-            :param msg: The message by which the command was sent.
             """
-            image = msg.attachments[0]
-            player_name = self.get_player(msg.author.id)
-            msg.guild.create_custom_emoji(player_name, image)
-            msg.channel.send(f'New emoji :{player_name}: uploaded')
+            image = await message.attachments[0].read()
+            player_name = self.get_player(message.author.id).name
+            await message.guild.create_custom_emoji(name=player_name, image=image)
+            await message.channel.send(f'New emoji :{player_name}: uploaded')
 
         cmds = {
             'challenge': Command(challenge,
@@ -350,7 +349,7 @@ class DisquidClient(discord.Client):
         if self.is_ready() and prefix == message.content[0]:
             command = str(message.content).strip(prefix).split(' ')[0]
             try:
-                await cmds[command].func(message)
+                await cmds[command].func()
             except KeyError:
                 print('User tried nonexistent command')
         else:
