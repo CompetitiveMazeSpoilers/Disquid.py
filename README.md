@@ -12,7 +12,7 @@ There are other moves as well, listed below:
 
 Conquer: One player may overtake one cell of the other player's land as long as 2 of said player's own cells are touching that land. This counts as a turn.
 
-Vanquish: A player may remove a 3x3 area of the other player's land as long as the enemy player owns every cell within a 3x3 area and the attempting player 
+Vanquish: A player may remove a 4x4 area of the other player's land as long as the enemy player owns every cell within a 4x4 area and the attempting player 
 owns 3 connecting cells.
 
 Conquest: The winning move. This must be used for the game to count as a win for the attempting player. Only succeeds if there is an unbroken line of cells
