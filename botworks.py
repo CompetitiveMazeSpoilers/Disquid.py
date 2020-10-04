@@ -261,6 +261,8 @@ class DisquidClient(discord.Client):
             channel_id = msg.channel.id
             target_game = self.active_games[channel_id]
             if target_game:
+                if not msg.author.id == target_game.players[0].uid:
+                    return
                 await self.get_channel(channel_id).send('Incoming Board!')
                 board_string = str(target_game)
                 for substring in board_string.split('#msg'):
