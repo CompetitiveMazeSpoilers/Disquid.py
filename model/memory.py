@@ -104,7 +104,7 @@ class Cache(object):
     #    else:
     #        self.boardview.set_view(self.save[self.nstate], self.current_player)
 
-    def receive(self, client, move: Move):
+    def receive(self, move: Move):
         """
         Turns a move into an updated cache.
         """
