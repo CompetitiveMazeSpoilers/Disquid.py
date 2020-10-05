@@ -31,76 +31,6 @@ class Player(object):
             return NotImplemented
 
 
-class Utility:
-    
-    @staticmethod
-    def format_locations(locs: [Position], game: Game):
-
-        def emoji_at(i, j) -> str:
-            # helper function
-            board = game.cache.latest
-            player = board[i][j].player
-            if player == 0:
-                # blank cell, use flag, add spoilers
-                return '||' + Board.flag_array[i][j][1] + '||'
-            else:
-                # player cell stand-in code
-                return game.players[player-1].emoji[player-1][0]
-
-        result = ''
-        for i, (r, c) in enumerate(locs, 1):
-            result += f'\'{i}: \'' + emoji_at(r,c) + f', R{r}, C{c}\n'
-        return result
-
-    @staticmethod
-    def read_move(player: int, action_text) -> Move:
-        """
-        Turns text into a move.
-        :param action_text: Text that should be converted.
-        :param player: Player doing the move.
-        :return: The move based on the given text.
-        """
-        args = action_text.split()
-        prefix = args[0]
-        player_num = player
-        del args[0]
-
-        # acquire
-        if prefix == 'A':
-            locs = []
-            for flag_code in args:
-                loc = Utility.translate_flag(flag_code)
-                if loc is None:
-                    raise InvalidMove
-                locs.append(loc)
-            return Move(prefix, player_num, locs=locs)
-        # vanquish
-        elif prefix == 'V':
-            if not len(args) == 3:
-                raise InvalidMove
-            if args[0] < 0 or args[0] > 27 or args[1] < 0 or args[1] > 13:
-                raise InvalidMove
-            return Move(prefix, player_num, corner=(args[0], args[1]))
-        # conquer / conquest
-        elif prefix == 'C' or prefix == 'Q':
-            return Move(prefix, player_num)
-        else:
-            raise InvalidMove
-
-    @staticmethod
-    def translate_flag(flag):
-        """
-        Takes in a flag and turns it into coordinates.
-        :param flag: The flag that should be translated.
-        :return: Coordinates of a given flag on the default layout.
-        """
-        for r, row in enumerate(Board.flag_array):
-            for c, flag_dec in enumerate(row):
-                if flag in flag_dec[0]:
-                    return r, c
-        return
-
-
 class Challenge(object):
     """
     Object created when one player wishes to start a game with another.
@@ -153,6 +83,79 @@ class Game(object):
             return self.channel_id == other
         else:
             return NotImplemented
+
+
+class Utility:
+
+    @staticmethod
+    def format_locations(locs: [Position], game):
+        """
+        Turns a given set of locations into something recognizable
+        by the end user on discord.
+        """
+        def emoji_at(i, j) -> str:
+            # helper function
+            board = game.cache.latest
+            player = board[i][j].player
+            if player == 0:
+                # blank cell, use flag, add spoilers
+                return '||' + Board.flag_array[i][j][1] + '||'
+            else:
+                # player cell stand-in code
+                return game.players[player - 1].emoji[player - 1][0]
+
+        result = ''
+        for i, (r, c) in enumerate(locs, 1):
+            result += f'\'{i}: \'' + emoji_at(r, c) + f', R{r}, C{c}\n'
+        return result
+
+    @staticmethod
+    def read_move(player: int, action_text) -> Move:
+        """
+        Turns text into a move.
+        :param action_text: Text that should be converted.
+        :param player: Player doing the move.
+        :return: The move based on the given text.
+        """
+        args = action_text.split()
+        prefix = args[0]
+        player_num = player
+        del args[0]
+
+        # acquire
+        if prefix == 'A':
+            locs = []
+            for flag_code in args:
+                loc = Utility.translate_flag(flag_code)
+                if loc is None:
+                    raise InvalidMove
+                locs.append(loc)
+            return Move(prefix, player_num, locs=locs)
+        # vanquish
+        elif prefix == 'V':
+            if not len(args) == 2:
+                raise InvalidMove
+            if int(args[0]) < 0 or int(args[0]) > 27 or int(args[1]) < 0 or int(args[1]) > 13:
+                raise InvalidMove
+            return Move(prefix, player_num, corner=(int(args[0]), int(args[1])))
+        # conquer / conquest
+        elif prefix == 'C' or prefix == 'Q':
+            return Move(prefix, player_num)
+        else:
+            raise InvalidMove
+
+    @staticmethod
+    def translate_flag(flag):
+        """
+        Takes in a flag and turns it into coordinates.
+        :param flag: The flag that should be translated.
+        :return: Coordinates of a given flag on the default layout.
+        """
+        for r, row in enumerate(Board.flag_array):
+            for c, flag_dec in enumerate(row):
+                if flag in flag_dec[0]:
+                    return r, c
+        return
 
 
 class InvalidGameSetup(Exception):

@@ -292,6 +292,7 @@ class DisquidClient(discord.Client):
                 self.save_prefixes()
                 self.save_players()
                 self.save_prefixes()
+                self.save_history()
                 await message.channel.send('Shutting down.')
                 exit()
             else:
@@ -308,8 +309,14 @@ class DisquidClient(discord.Client):
                 image = await attachments[0].read()
                 player_name = self.get_player(message.author.id).name
                 d_guild = self.get_guild(self.debug_guild)
-                final_emoji = await message.d_guild.create_custom_emoji(name=player_name, image=image)
+                final_emoji = await d_guild.create_custom_emoji(name=player_name, image=image)
                 await message.channel.send(f'New emoji :{final_emoji}: uploaded')
+
+        async def reprint_board():
+            if message.channel.id in self.active_games:
+                await self.update_board(self.active_games[message.channel.id])
+            else:
+                await message.channel.send('No board to update here.')
 
         cmds = {
             'challenge': Command(challenge,
@@ -362,9 +369,11 @@ class DisquidClient(discord.Client):
         else:
             if message.channel.id not in self.active_games:
                 return
+            if not str(message.content)[0] in ['A', 'C', 'V', 'Q']:
+                return
             game = self.active_games[message.channel.id]
             cache = game.cache
-            if not message.author.id == game.players[game.cache.current_player-1].uid:
+            if not message.author.id == game.players[cache.current_player-1].uid:
                 await message.channel.send('Not your turn!')
                 return
             try:
@@ -379,9 +388,9 @@ class DisquidClient(discord.Client):
                 cache.move = None
                 await message.channel.send(f'It is now <@{game.players[game.cache.current_player - 1].uid}>\'s turn.')
             except InvalidMove:
-                prefix = message.content.split()[0]
-                if prefix == 'V':
-                    vanq_spots: str = Utility.format_locations(cache.latest.vanquish_spots(cache.current_player), cache.latest)
+                move_prefix = message.content.split()[0]
+                if move_prefix == 'V':
+                    vanq_spots: str = Utility.format_locations(cache.latest.vanquish_spots(cache.current_player), game)
                     await message.channel.send('Vanquish options:\n' + vanq_spots)
                 else:
                     await message.channel.send(
