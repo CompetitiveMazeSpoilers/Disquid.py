@@ -61,17 +61,15 @@ class DisquidClient(discord.Client):
     default_prefix = '*'
     data_path = Path('data/')
     auto_save_duration = 300  # in seconds
-    admins = [
-        216302359435804684,
-        267792207942123530,
-        285827256788451328
-    ]
+    admins: []
     debug_guild = 762071050007609344
 
-    def __init__(self, prefix_file_name: str = 'prefixes', player_file_name: str = 'players',
+    def __init__(self, prefix_file_name: str = 'prefixes', admin_file_name: str = 'admins',
+                 player_file_name: str = 'players',
                  game_file_name: str = 'games', history_file_name: str = 'history', **options):
         super().__init__(**options)
         self.prefix_file = DisquidClient.data_path.joinpath(prefix_file_name + '.json')
+        self.admin_file = DisquidClient.data_path.joinpath(admin_file_name + '.json')
         self.player_file = DisquidClient.data_path.joinpath(player_file_name + '.pickle')
         self.game_file = DisquidClient.data_path.joinpath(game_file_name + '.pickle')
         self.history_file = DisquidClient.data_path.joinpath(history_file_name + '.pickle')
@@ -83,15 +81,28 @@ class DisquidClient(discord.Client):
         # Prefix file loading
         if not os.path.exists(self.prefix_file):
             with open(self.prefix_file, 'w') as f:
+                f.truncate(0)
                 json.dump({}, f)
             self.prefixes: {int, str} = {}
         else:
             with open(self.prefix_file, 'r') as f:
                 self.prefixes: {int, str} = json.load(f)
 
+        # Admin id file loading:
+        if not os.path.exists(self.admin_file):
+            with open(self.admin_file, 'w') as f:
+                f.truncate(0)
+                temp = [str(input('Please give the first admin\'s userID'))]
+                json.dump(temp, f)
+            self.admins = temp
+        else:
+            with open(self.admin_file, 'r') as f:
+                self.admins = json.load(f)
+
         # Player file loading
         if not os.path.exists(self.player_file):
             with open(self.player_file, 'wb') as f:
+                f.truncate(0)
                 pickle.dump({}, f)
             self.players: {int, Player} = {}
         else:
@@ -104,6 +115,7 @@ class DisquidClient(discord.Client):
         # Active Game file loading
         if not os.path.exists(self.game_file):
             with open(self.game_file, 'wb') as f:
+                f.truncate(0)
                 pickle.dump({}, f)
             self.active_games: {int, Game} = {}
         else:
@@ -113,6 +125,7 @@ class DisquidClient(discord.Client):
         # Active Game file loading
         if not os.path.exists(self.history_file):
             with open(self.history_file, 'wb') as f:
+                f.truncate(0)
                 pickle.dump([], f)
                 self.game_history: [Game] = []
         else:
@@ -123,6 +136,7 @@ class DisquidClient(discord.Client):
         async def auto_save(duration: int):
             await asyncio.sleep(duration)
             self.save_players()
+            self.save_admins()
             self.save_games()
             self.save_prefixes()
             self.save_history()
@@ -159,6 +173,14 @@ class DisquidClient(discord.Client):
             f.truncate(0)
             json.dump(self.prefixes, f, indent=4)
 
+    def save_admins(self):
+        """
+        Saves current dict of prefixes to a file using JSON.
+        """
+        with open(self.admin_file, "w") as f:
+            f.truncate(0)
+            json.dump(self.admins, f, indent=4)
+
     def save_players(self):
         """
         Saves current dict of players to a file using pickle.
@@ -188,7 +210,7 @@ class DisquidClient(discord.Client):
         Called when bot is setup and ready.
         Put any startup actions here.
         """
-        print(f'Disquid {__version__} ready to play.')
+        print(f'Disquid {__version__} ready.')
         await self.get_channel(762071050522984470).send(f'Disquid {__version__} ready to test.')  # Test channel
 
     async def on_message(self, message: discord.Message):
@@ -222,7 +244,7 @@ class DisquidClient(discord.Client):
                 await message.channel.send(f'{chal.p1.name} challenges {chal.p2.name}')
             else:
                 await message.channel.send('Too many or too few players mentioned, '
-                                                            'challenge failed.')
+                                           'challenge failed.')
 
         async def accept():
             """
@@ -262,7 +284,7 @@ class DisquidClient(discord.Client):
 
             else:
                 await message.channel.send('Too many or too few players mentioned, '
-                                                            'accept failed.')
+                                           'accept failed.')
 
         async def start():
             """
@@ -284,23 +306,9 @@ class DisquidClient(discord.Client):
                 return
             await self.get_channel(channel_id).send(f'No waiting game found, please use {prefix}challenge to make one.')
 
-        async def on_exit():
-            """
-            Called to exit the bot.
-            """
-            if message.author.id in DisquidClient.admins:
-                self.save_prefixes()
-                self.save_players()
-                self.save_prefixes()
-                self.save_history()
-                await message.channel.send('Shutting down.')
-                exit()
-            else:
-                await message.channel.send('Insufficient user permissions.')
-
         async def upload_emoji():
             """
-            Uploads attachment as emoji
+            Uploads attachment as emoji.
             """
             attachments = message.attachments
             if len(attachments) == 0:
@@ -317,6 +325,20 @@ class DisquidClient(discord.Client):
                 await self.update_board(self.active_games[message.channel.id])
             else:
                 await message.channel.send('No board to update here.')
+
+        async def on_exit():
+            """
+            Called to exit the bot.
+            """
+            if message.author.id in DisquidClient.admins:
+                self.save_prefixes()
+                self.save_players()
+                self.save_prefixes()
+                self.save_history()
+                await message.channel.send('Shutting down.')
+                exit()
+            else:
+                await message.channel.send('Insufficient user permissions.')
 
         cmds = {
             'challenge': Command(challenge,
@@ -372,7 +394,7 @@ class DisquidClient(discord.Client):
                 return
             game = self.active_games[message.channel.id]
             cache = game.cache
-            if not message.author.id == game.players[cache.current_player-1].uid:
+            if not message.author.id == game.players[cache.current_player - 1].uid:
                 await message.channel.send('Not your turn!')
                 return
             try:
@@ -389,8 +411,9 @@ class DisquidClient(discord.Client):
             except InvalidMove:
                 move_prefix = message.content.split()[0]
                 if move_prefix == 'V':
-                    vanq_spots: str = Utility.format_locations(cache.latest.vanquish_spots(cache.current_player), game)
-                    await message.channel.send('Vanquish options:\n' + vanq_spots)
+                    vanquish_spots: str = Utility.format_locations(cache.latest.vanquish_spots(cache.current_player),
+                                                                   game)
+                    await message.channel.send('Vanquish options:\n' + vanquish_spots)
                 else:
                     await message.channel.send(
                         f'Not a valid move! Use \'{prefix}help moves\' to get help.')
