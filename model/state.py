@@ -34,6 +34,8 @@ hardcoded_board = '(<gu)(<pm)(<gf)(<pg)(<mk)(<va)(<dz)(<kz)(<np)(vu)(cu)(om)(pr)
                   '>lk)(>kn)(>na)(>tl)(>vi)\n(<me)(<tk)(<bt)(<cx)(<re)(<mt)(<pk)(<cy)(<br)(za)(km)(zw)(cf)(ag)(gb)(' \
                   'us)(io)(um)(dg)(>br)(>cy)(>pk)(>mt)(>re)(>cx)(>bt)(>tk)(>me)'
 
+default_board_file = Path('data/board.json')
+
 
 class Cell(object):
     """
@@ -65,7 +67,7 @@ def generate_flag_array() -> [[Flag]]:
     Turns the hardcoded array into a Flag array and writes the .json file.
     Can be overwritten by a .json file if it already exists.
     """
-    if not os.path.exists(Board.default_board_file):
+    if not os.path.exists(default_board_file):
         string_split_arr = hardcoded_board.split('\n')
         string_2d_arr = []
         for string in string_split_arr:
@@ -84,11 +86,11 @@ def generate_flag_array() -> [[Flag]]:
                     flag_code = split_string[1]
                     temp_arr.append((aliases, f':{flag_code}:'))
             final_board_arr.append(temp_arr)
-        with open(Board.default_board_file, 'w') as f:
+        with open(default_board_file, 'w') as f:
             json.dump(final_board_arr, f, indent=4)
         return final_board_arr
 
-    with open(Board.default_board_file, 'r') as f:
+    with open(default_board_file, 'r') as f:
         return json.load(f)
 
 
@@ -112,8 +114,7 @@ class Board(list):
                          (0, -1), (1, -1), (2, -1), (3, -1),
                          (0, 4), (1, 4), (2, 4), (3, 4)]
 
-    default_board_file = Path('data/board.json')
-    flag_array: [[Flag]]
+    flag_array: [[Flag]] = generate_flag_array()
 
     def __init__(self, r: int, c: int, bases: [Position]):
         super().__init__()
@@ -124,8 +125,6 @@ class Board(list):
 
         self.make_base(1)
         self.make_base(2)
-
-        Board.flag_array = generate_flag_array()
 
     def make_base(self, player: int):
         """
