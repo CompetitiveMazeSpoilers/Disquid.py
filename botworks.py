@@ -4,7 +4,7 @@ from typing import Callable
 
 from model.game import *
 
-__version__ = 'v0.0.1a1'
+__version__ = 'v0.1beta'
 
 """
 AUTHORS:
@@ -114,7 +114,7 @@ class DisquidClient(discord.Client):
         if not os.path.exists(self.history_file):
             with open(self.history_file, 'wb') as f:
                 pickle.dump([], f)
-                self.game_history: [Game] = {}
+                self.game_history: [Game] = []
         else:
             with open(self.history_file, 'rb') as f:
                 self.game_history: [Game] = pickle.load(f)
@@ -347,11 +347,11 @@ class DisquidClient(discord.Client):
             else:
                 if processed_message[1] == 'moves':
                     await message.channel.send(
-                        'A -- Aquire, this move claims 3 cells given as arguments with flag codes (eg. :flag_us: -> '
+                        'A -- Acquire, this move claims 3 cells given as arguments with flag codes (eg. :flag_us: -> '
                         'us).\n'
-                        'V -- Vanquish, this move is used to clear a 4x4 area of an enermy cells as long as 4 of the '
+                        'V -- Vanquish, this move is used to clear a 4x4 area of an enemy cells as long as 4 of the '
                         'attempting player\'s own cells touch the region.\n'
-                        'C -- Conquer, this move claims all enemy cells that touch 2 of the attemting player\'s '
+                        'C -- Conquer, this move claims all enemy cells that touch 2 of the attempting player\'s '
                         'cells.\n'
                         'Q -- Conquest, this move is required to win the game, used when the attempting player'
                         'believes they have a path to the enemy base.')
@@ -368,9 +368,7 @@ class DisquidClient(discord.Client):
             except KeyError:
                 print('User tried nonexistent command')
         else:
-            if message.channel.id not in self.active_games:
-                return
-            if not str(message.content)[0] in ['A', 'C', 'V', 'Q']:
+            if message.channel.id not in self.active_games or not str(message.content)[0] in ['A', 'C', 'V', 'Q']:
                 return
             game = self.active_games[message.channel.id]
             cache = game.cache
@@ -413,8 +411,12 @@ class DisquidClient(discord.Client):
     async def on_win(self, game):
         channel = self.get_channel(game.channel_id)
         await channel.send(f'<@{game.players[game.cache.current_player - 1].uid}> WINS!')
+        self.active_games.pop(game)
+        self.game_history.append(game)
 
         async def channel_del(chl):
+            await chl.send('Channel will be deleted in 1hr, then moved to history.')
+            await asyncio.sleep(3600)
             await chl.delete(reason='Game Complete')
 
         asyncio.run_coroutine_threadsafe(channel_del(channel), asyncio.get_event_loop())
