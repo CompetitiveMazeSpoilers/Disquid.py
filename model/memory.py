@@ -1,5 +1,3 @@
-import discord
-
 from model.state import *
 
 
@@ -26,13 +24,6 @@ class History(object):
         Stores the given move.
         """
         self.moves.append(move.__dict__)
-
-    def is_finished(self):
-        """
-        Game finished check.
-        :return: if the given game is won by either player.
-        """
-        return self.moves and self.moves[-1]['move_type'] == 'Q'
 
     def move_history(self):
         """
@@ -81,14 +72,6 @@ class Cache(object):
         self.latest = self.save[-1].deepcopy()
         self.move = None
 
-    def at_last_state(self, finish_allowed=True):
-        """
-        Checks if the cache represents a finalized game.
-        :return: if the cache represents a finalized game.
-        """
-        return self.nstate == len(self.save) - 1 and \
-               finish_allowed or not self.hist.is_finished()
-
     # def play_back(self):
     #    if self.nstate > 0:
     #       self.nstate -= 1
@@ -118,8 +101,3 @@ class Cache(object):
         self.save.append(self.latest.deepcopy())
         self.hist.store(self.move)
         self.nstate += 1
-
-    # def discard_change(self):
-    #    self.latest = self.save[-1].copy()
-    #    self.boardview.set_view(self.latest)
-    #    self.move = None

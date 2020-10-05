@@ -1,4 +1,5 @@
 from model.memory import *
+import discord
 
 EmojiSet = Tuple[str, str]
 EmojiArray = Tuple[EmojiSet, EmojiSet]
