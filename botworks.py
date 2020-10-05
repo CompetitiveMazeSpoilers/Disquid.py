@@ -279,8 +279,8 @@ class DisquidClient(discord.Client):
                 for substring in board_string.split('#msg'):
                     await self.get_channel(channel_id).send(substring)
                 await self.get_channel(channel_id).send(
-                    f'It is <@{target_game.players[target_game.cache.current_player - 1].uid}>\'s turn! Do \'{prefix}help moves\' for move '
-                    f'help')
+                    f'It is <@{target_game.players[target_game.cache.current_player - 1].uid}>\'s turn! Do \'{prefix}'
+                    f'help moves\' for move help')
                 return
             await self.get_channel(channel_id).send(f'No waiting game found, please use {prefix}challenge to make one.')
 
@@ -326,8 +326,9 @@ class DisquidClient(discord.Client):
                               'Accept another player\'s challenge by running this command and mentioning them in '
                               'the same message'),
             'start': Command(start, 'Start a game once in a game channel that has been setup successfully.'),
-            'exit': Command(on_exit, 'Shut down the bot.'),
-            'upload': Command(upload_emoji, 'Upload attached image as custom emoji')
+            'upload': Command(upload_emoji, 'Upload attached image as custom emoji'),
+            'refresh': Command(reprint_board, 'Reprints the current game\'s board'),
+            'exit': Command(on_exit, 'Shut down the bot.')
         }
 
         async def help_command():
