@@ -78,7 +78,7 @@ class Utility:
         elif prefix == 'V':
             if not len(args) == 3:
                 raise InvalidMove
-            if args[0] < 0 or args[0] > 27 or args[1] < 0 or args[1] > 13:
+            if args[0] < 0 or args[0] > 13 or args[1] < 0 or args[1] > 27:
                 raise InvalidMove
             return Move(prefix, player_num, corner=(args[0], args[1]))
         # conquer / conquest
