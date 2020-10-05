@@ -213,6 +213,13 @@ class DisquidClient(discord.Client):
         print(f'Disquid {__version__} ready.')
         await self.get_channel(762071050522984470).send(f'Disquid {__version__} ready to test.')  # Test channel
 
+    async def on_guild_join(self, guild: discord.Guild):
+        """
+        This is called when the bot is invited to and joins a new "server".
+        :param guild: Guild Class joined found at https://discordpy.readthedocs.io/en/latest/api.html#guild.
+        """
+        self.prefixes[guild.id] = self.default_prefix
+
     async def on_message(self, message: discord.Message):
         """
         Here will go the processing for breaking down messages into component parts.
@@ -278,7 +285,7 @@ class DisquidClient(discord.Client):
                             return
                         await message.channel.send(
                             f'Challenge accepted! Game started in <#{channel.id}>')
-                        await self.get_channel(channel.id).send(
+                        await message.channel.send(
                             f'Game creation success! Welcome to Conquid!. Type {prefix}start to begin.')
                         self.active_challenges.remove(c)
 
@@ -296,29 +303,15 @@ class DisquidClient(discord.Client):
                 if not message.author.id == target_game.players[0].uid:
                     await message.channel.send('Challenger needs to start the game!')
                     return
-                await self.get_channel(channel_id).send('Incoming Board!')
+                await message.channel.send('Incoming Board!')
                 board_string = str(target_game)
                 for substring in board_string.split('#msg'):
-                    await self.get_channel(channel_id).send(substring)
-                await self.get_channel(channel_id).send(
+                    await message.channel.send(substring)
+                await message.channel.send(
                     f'It is <@{target_game.players[target_game.cache.current_player - 1].uid}>\'s turn! Do \'{prefix}'
                     f'help moves\' for move help')
                 return
-            await self.get_channel(channel_id).send(f'No waiting game found, please use {prefix}challenge to make one.')
-
-        async def upload_emoji():
-            """
-            Uploads attachment as emoji.
-            """
-            attachments = message.attachments
-            if len(attachments) == 0:
-                await message.channel.send('No image provided')
-            else:
-                image = await attachments[0].read()
-                player_name = self.get_player(message.author.id).name
-                d_guild = self.get_guild(self.debug_guild)
-                final_emoji = await d_guild.create_custom_emoji(name=player_name, image=image)
-                await message.channel.send(f'New emoji :{final_emoji}: uploaded')
+            await message.channel.send(f'No waiting game found, please use {prefix}challenge to make one.')
 
         async def reprint_board():
             if message.channel.id in self.active_games:
@@ -326,12 +319,64 @@ class DisquidClient(discord.Client):
             else:
                 await message.channel.send('No board to update here.')
 
+        async def upload_emoji():
+            """
+            Uploads attachment as emoji.
+            """
+            processed_message = str(message.content).split(' ')
+            attachments = message.attachments
+            if len(attachments) == 0:
+                await message.channel.send('No image provided')
+            else:
+                image = await attachments[0].read()
+                player_name = self.get_player(message.author.id).name
+                d_guild = self.get_guild(self.debug_guild)
+
+                set_base = processed_message[1] == 'base'
+
+                final_emoji = await d_guild.create_custom_emoji(name=(player_name if set_base else player_name + '_b'),
+                                                                image=image)
+                # Check if tile or base
+                if len(processed_message) == 1 or processed_message[1] == 'tile':
+                    self.get_player(message.author.id).custom_emoji[0] = final_emoji
+                elif set_base:
+                    self.get_player(message.author.id).custom_emoji[1] = final_emoji
+
+                await message.channel.send(f'New emoji :{final_emoji}: uploaded')
+
+        async def delete_emoji():
+            """
+            Deletes custom emoji
+            """
+            processed_message = str(message.content).split(' ')
+            emoji_owner = self.get_player(message.author.id)
+
+            if len(processed_message) == 1:
+                tile_type = 'tile'
+            else:
+                tile_type = processed_message[1]
+            if tile_type == 'tile':
+                emoji_index = 0
+            elif tile_type == 'base':
+                emoji_index = 1
+            else:
+                await message.channel.send(f'Invalid Argument: \'{processed_message[1]}\'')
+                return
+
+            if emoji_owner.custom_emoji[emoji_index] is None:
+                await message.channel.send('No emoji to delete')
+            else:
+                c_emoji = emoji_owner.custom_emoji[emoji_index]
+                await c_emoji.delete()
+                await message.channel.send(f'{emoji_owner.name} custom {tile_type} has been deleted')
+
         async def on_exit():
             """
             Called to exit the bot.
             """
             if message.author.id in DisquidClient.admins:
                 self.save_prefixes()
+                self.save_admins()
                 self.save_players()
                 self.save_prefixes()
                 self.save_history()
@@ -348,8 +393,9 @@ class DisquidClient(discord.Client):
                               'Accept another player\'s challenge by running this command and mentioning them in '
                               'the same message'),
             'start': Command(start, 'Start a game once in a game channel that has been setup successfully.'),
-            'upload': Command(upload_emoji, 'Upload attached image as custom emoji'),
             'refresh': Command(reprint_board, 'Reprints the current game\'s board'),
+            'upload': Command(upload_emoji, '[*, tile, base] Upload attached image as custom cell emoji'),
+            'delete': Command(delete_emoji, '[*, tile, base] Delete custom emoji to free up slot'),
             'exit': Command(on_exit, 'Shut down the bot.')
         }
 
@@ -380,7 +426,7 @@ class DisquidClient(discord.Client):
                 else:
                     await message.channel.send('No help found.')
 
-        cmds['help'] = Command(help_command, 'This command.')
+        cmds['help'] = Command(help_command, '[*, moves] Gives information on commands.')
 
         prefix = self.get_prefix(message.guild.id)
         if self.is_ready() and prefix == message.content[0]:
@@ -390,7 +436,8 @@ class DisquidClient(discord.Client):
             except KeyError:
                 print('User tried nonexistent command')
         else:
-            if message.channel.id not in self.active_games or not str(message.content)[0] in ['A', 'C', 'V', 'Q']:
+            if message.channel.id not in self.active_games or not str(message.content)[0] in ['A', 'C', 'V', 'Q'] \
+                    or len(message.content.split()) > 3:
                 return
             game = self.active_games[message.channel.id]
             cache = game.cache
@@ -418,13 +465,6 @@ class DisquidClient(discord.Client):
                     await message.channel.send(
                         f'Not a valid move! Use \'{prefix}help moves\' to get help.')
 
-    async def on_guild_join(self, guild: discord.Guild):
-        """
-        This is called when the bot is invited to and joins a new "server".
-        :param guild: Guild Class joined found at https://discordpy.readthedocs.io/en/latest/api.html#guild.
-        """
-        self.prefixes[guild.id] = self.default_prefix
-
     async def update_board(self, game):
         channel = self.get_channel(game.channel_id)
         await channel.send('Incoming Board!')
@@ -438,7 +478,7 @@ class DisquidClient(discord.Client):
         self.game_history.append(game)
 
         async def channel_del(chl):
-            await chl.send('Channel will be deleted in 1hr, then moved to history.')
+            await chl.send('Channel will be deleted in 1hr, and has been moved to game history.')
             await asyncio.sleep(3600)
             await chl.delete(reason='Game Complete')
 
