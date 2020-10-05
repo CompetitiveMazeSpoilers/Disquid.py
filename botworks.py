@@ -45,6 +45,19 @@ def command(aliases: [str] = None):
     return decorator
 
 
+class Color:
+    PURPLE = '\033[95m'
+    CYAN = '\033[96m'
+    DARKCYAN = '\033[36m'
+    BLUE = '\033[94m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+    END = '\033[0m'
+
+
 class DisquidClient(discord.Client):
     """
     Main body for the Discord Client interface for the project.
@@ -428,23 +441,24 @@ class DisquidClient(discord.Client):
         else:
             await message.channel.send('Insufficient user permissions.')
 
-    @command(['h'])
+    @command(['help', 'h'])
     async def help_command(self, message):
         """
         [*, moves] Provides descriptions of commands.
         """
         processed_message = str(message.content).split(' ')
         if len(processed_message) == 1:
-            help_string = '```diff\nHelp Commands:'
+            current_list = ''
+            embed_var = discord.Embed(title="Help Commands", color=0xc0365e)
             for key in commands:
                 aliases = []
                 for k in commands:
                     aliases.append(k) if commands[key] == commands[k] else aliases
-                help_string += '\n+'
-                help_string += (str(aliases) + ': ').strip('[').strip(']')
-                help_string += str(commands[key].__doc__)
-            help_string += '```'
-            await message.channel.send(help_string)
+                new_line = str(aliases) + str(commands[key].__doc__)
+                current_list += new_line
+                if new_line not in current_list:
+                    embed_var.add_field(name=str(aliases), value=str(commands[key].__doc__))
+            await message.channel.send(embed=embed_var)
         else:
             if processed_message[1] == 'moves':
                 await message.channel.send(
