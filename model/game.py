@@ -106,7 +106,7 @@ class Utility:
 
         result = ''
         for i, (r, c) in enumerate(locs, 1):
-            result += f'\'{i}: \'' + emoji_at(r, c) + f', R{r}, C{c}\n'
+            result += f'`{i}: `' + emoji_at(r,c) + f', R{r}, C{c}\n'
         return result
 
     @staticmethod
@@ -135,7 +135,7 @@ class Utility:
         elif prefix == 'V':
             if not len(args) == 2:
                 raise InvalidMove
-            if int(args[0]) < 0 or int(args[0]) > 27 or int(args[1]) < 0 or int(args[1]) > 13:
+            if int(args[0]) < 0 or int(args[0]) > 13 or int(args[1]) < 0 or int(args[1]) > 27:
                 raise InvalidMove
             return Move(prefix, player_num, corner=(int(args[0]), int(args[1])))
         # conquer / conquest
