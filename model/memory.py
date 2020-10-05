@@ -42,10 +42,10 @@ class History(object):
         # starting state
         board = Board(self.rows, self.cols, self.bases)
         # update boards with moves to generate list
-        boards: [Board] = [board.deepcopy()]
+        boards: [Board] = [board]
         for mv in self.moves:
-            Move(**mv)(board)
-            boards.append(board.deepcopy())
+            board = Move(**mv)(board)
+            boards.append(board)
         return boards
 
 
@@ -69,7 +69,7 @@ class Cache(object):
         self.nstate = 0
         self.save = history.board_history()
         self.nstate = len(self.save) - 1
-        self.latest = self.save[-1].deepcopy()
+        self.latest = self.save[-1]
         self.move = None
 
     # def play_back(self):
@@ -93,11 +93,11 @@ class Cache(object):
         """
         if self.move:
             return
-        move(self.latest, validate=True)
+        self.latest = move(self.latest, validate=True)
         self.move = move
         # Confirm the latest move and test for a win condition.
         if not self.move:
             return
-        self.save.append(self.latest.deepcopy())
+        self.save.append(self.latest)
         self.hist.store(self.move)
         self.nstate += 1

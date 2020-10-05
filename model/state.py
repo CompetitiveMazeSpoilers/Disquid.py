@@ -373,17 +373,19 @@ class Move(object):
             self.corner = corner
 
     def __call__(self, board: Board, *, validate=False):
+        b = board.deepcopy()
         if self.move_type == 'A':
-            func = partial(board.acquire, validate=validate)
+            func = partial(b.acquire, validate=validate)
         elif self.move_type == 'C':
-            func = board.conquer
+            func = b.conquer
         elif self.move_type == 'V':
-            func = partial(board.vanquish, validate=validate)
+            func = partial(b.vanquish, validate=validate)
         elif self.move_type == 'Q':
-            func = board.conquest
+            func = b.conquest
         else:
             raise InvalidMove
         func(**{k: v for k, v in self.__dict__.items() if k != 'move_type'})
+        return b
 
 
 class InvalidMove(Exception):
