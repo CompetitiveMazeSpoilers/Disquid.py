@@ -106,7 +106,7 @@ class Utility:
 
         result = ''
         for i, (r, c) in enumerate(locs, 1):
-            result += f'`{i}: `' + emoji_at(r,c) + f', R{r}, C{c}\n'
+            result += f'`V {r} {c}` : ' + emoji_at(r, c) + f' , rows {r}-{r+4}, cols {c}-{c+4},\n'
         return result
 
     @staticmethod
