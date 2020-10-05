@@ -284,6 +284,12 @@ class DisquidClient(discord.Client):
                 return
             await self.get_channel(channel_id).send(f'No waiting game found, please use {prefix}challenge to make one.')
 
+        async def reprint_board():
+            if message.channel.id in self.active_games:
+                await self.update_board(self.active_games[message.channel.id])
+            else:
+                await message.channel.send('No board to update here.')
+
         async def on_exit():
             """
             Called to exit the bot.
@@ -302,6 +308,7 @@ class DisquidClient(discord.Client):
             """
             Uploads attachment as emoji
             """
+            processed_message = str(message.content).split(' ')
             attachments = message.attachments
             if len(attachments) == 0:
                 await message.channel.send('No image provided')
@@ -309,15 +316,42 @@ class DisquidClient(discord.Client):
                 image = await attachments[0].read()
                 player_name = self.get_player(message.author.id).name
                 d_guild = self.get_guild(self.debug_guild)
-                final_emoji = await d_guild.create_custom_emoji(name=player_name, image=image)
+
+                set_base = processed_message[1] == 'base'
+
+                final_emoji = await d_guild.create_custom_emoji(name=(player_name if set_base else player_name + '_b'),
+                                                                image=image)
+                # Check if tile or base
+                if len(processed_message) == 1 or processed_message[1] == 'tile':
+                    self.get_player(message.author.id).custom_emoji[0] = final_emoji
+                elif set_base:
+                    self.get_player(message.author.id).custom_emoji[1] = final_emoji
+
                 await message.channel.send(f'New emoji :{final_emoji}: uploaded')
 
-        async def reprint_board():
-            if message.channel.id in self.active_games:
-                await self.update_board(self.active_games[message.channel.id])
-            else:
-                await message.channel.send('No board to update here.')
+        async def delete_emoji():
+            """
+            Deletes custom emoji
+            """
+            processed_message = str(message.content).split(' ')
+            emoji_owner = self.get_player(message.author.id)
 
+            if len(processed_message) == 1:
+                tile_type = 'tile'
+            else:
+                tile_type = processed_message[1]
+
+            if tile_type == 'tile':
+                emoji_index = 0
+            elif tile_type == 'base':
+                emoji_index = 1
+
+            if emoji_owner.custom_emoji[emoji_index] is None:
+                await message.channel.send('No emoji to delete')
+            else:
+                c_emoji = emoji_owner.custom_emoji[emoji_index]
+                await c_emoji.delete()
+                await message.channel.send(f'{emoji_owner.name} custom {tile_type} has been deleted')
         cmds = {
             'challenge': Command(challenge,
                                  'Challenge another player by running this command and mentioning them in the '
@@ -326,9 +360,10 @@ class DisquidClient(discord.Client):
                               'Accept another player\'s challenge by running this command and mentioning them in '
                               'the same message'),
             'start': Command(start, 'Start a game once in a game channel that has been setup successfully.'),
-            'upload': Command(upload_emoji, 'Upload attached image as custom emoji'),
             'refresh': Command(reprint_board, 'Reprints the current game\'s board'),
-            'exit': Command(on_exit, 'Shut down the bot.')
+            'exit': Command(on_exit, 'Shut down the bot.'),
+            'upload': Command(upload_emoji, '[*, tile, base] Upload attached image as custom cell emoji'),
+            'delete': Command(delete_emoji, '[*, tile, base] Delete custom emoji to free up slot')
         }
 
         async def help_command():
@@ -358,7 +393,7 @@ class DisquidClient(discord.Client):
                 else:
                     await message.channel.send('No help found.')
 
-        cmds['help'] = Command(help_command, 'This command.')
+        cmds['help'] = Command(help_command, '[*, moves] Gives information on commands.')
 
         prefix = self.get_prefix(message.guild.id)
         if self.is_ready() and prefix == message.content[0]:
