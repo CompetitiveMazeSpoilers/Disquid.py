@@ -1,5 +1,6 @@
 import asyncio
 import pickle
+import sys
 
 from model.game import *
 
@@ -98,12 +99,12 @@ class DisquidClient(discord.Client):
         if not os.path.exists(self.admin_file):
             with open(self.admin_file, 'w') as f:
                 f.truncate(0)
-                temp = [str(input('Please give the first admin\'s userID'))]
+                temp = [str(input('Please give the first admin\'s userID '))]
                 json.dump(temp, f)
-            self.admins = temp
+            DisquidClient.admins = temp
         else:
             with open(self.admin_file, 'r') as f:
-                self.admins = json.load(f)
+                DisquidClient.admins = json.load(f)
 
         # Player file loading
         if not os.path.exists(self.player_file):
@@ -142,11 +143,7 @@ class DisquidClient(discord.Client):
         async def auto_save(duration: int):
             while True:
                 await asyncio.sleep(duration)
-                self.save_players()
-                self.save_admins()
-                self.save_games()
-                self.save_prefixes()
-                self.save_history()
+                await self.save()
 
         asyncio.run_coroutine_threadsafe(auto_save(DisquidClient.auto_save_duration), asyncio.get_event_loop())
 
@@ -186,7 +183,7 @@ class DisquidClient(discord.Client):
         """
         with open(self.admin_file, "w") as f:
             f.truncate(0)
-            json.dump(self.admins, f, indent=4)
+            json.dump(DisquidClient.admins, f, indent=4)
 
     def save_players(self):
         """
@@ -404,29 +401,30 @@ class DisquidClient(discord.Client):
             await message.channel.send('No board to update here.')
 
     @command(['set_cell', 'set'])
-    async def set_tile(self, message):
+    async def set_tile(self, message: discord.Message):
         """
         [main, alt] [tile, base] [(color), custom] Set player cell emoji
         """
         processed_message = str(message.content).split()
-        if len(processed_message) < 4:
+        del processed_message[0]
+        if len(processed_message) < 3:
             await message.channel.send('Missing arguments')
         else:
-            if processed_message[2] == 'tile':
-                tile_type = 0
-            elif processed_message[2] == 'base':
-                tile_type = 1
-            else:
-                tile_type = None
-
-            if processed_message[1] == 'main':
+            if processed_message[0] == 'main':
                 tile_favor = 0
-            elif processed_message[1] == 'alt':
+            elif processed_message[0] == 'alt':
                 tile_favor = 1
             else:
                 tile_favor = None
 
-            tile_name = processed_message[3]
+            if processed_message[1] == 'tile':
+                tile_type = 0
+            elif processed_message[1] == 'base':
+                tile_type = 1
+            else:
+                tile_type = None
+
+            tile_name = processed_message[2]
             emoji_opts = {
                 'black': ':black_large_square:',
                 'brown': ':brown_square:',
@@ -473,7 +471,7 @@ class DisquidClient(discord.Client):
 
         if len(attachments) == 0:
             await message.channel.send('No image provided')
-        elif slot is None:
+        elif not slot:
             await message.channel.send('Invalid arguments.')
         elif not slot_empty:
             await message.channel.send('Slot is not empty. use the delete command.')
@@ -528,6 +526,37 @@ class DisquidClient(discord.Client):
             emoji_owner.custom_emoji[emoji_index] = ''
             await message.channel.send(f'{emoji_owner.name} custom {tile_type} slot has been deleted')
 
+    @command(['name', 'changename'])
+    async def change_name(self, message: discord.Message):
+        """
+        [3 letter name (ex. 'dft')] Changes the name of the user who sends the message,
+        as well as all of the user's custom emoji.
+        """
+        uid = message.author.id
+        processed_message = message.content.split()
+        del processed_message[0]
+        if len(processed_message) == 0:
+            await message.channel.send('No name provided.')
+            return
+        if len(processed_message) > 1:
+            await message.channel.send('Invalid Arguments.')
+            return
+        if len(processed_message[0]) != 3:
+            await message.channel.send('Name too long or short.')
+            return
+        for key in self.players:
+            if processed_message[0] == self.players[key].name:
+                await message.channel.send('Name taken.')
+                return
+        self.get_player(uid).name = str(processed_message[0])
+        for i in range(len(self.get_player(uid).custom_emoji)):
+            if '' not in self.get_player(uid).custom_emoji[i]:
+                if i == 0:
+                    self.get_player(uid).custom_emoji[0].edit(str(processed_message[0]+'_b'))
+                if i == 1:
+                    self.get_player(uid).custom_emoji[1].edit(str(processed_message[0]))
+        await message.channel.send('Name changed successfully!')
+
     @command(['delgame', 'del'])
     async def delete_game(self, message: discord.Message):
         """
@@ -562,24 +591,28 @@ class DisquidClient(discord.Client):
         else:
             await message.channel.send('No game to delete in this channel.')
 
-    @command(['exit'])
-    async def on_exit(self, message: discord.Message):
+    @command(['save'])
+    async def save(self, message: discord.Message = None):
         """
-        Called by an admin to exit the bot.
+        Called by an admin to save all files in the bot.
         """
-        if message.author.id in DisquidClient.admins:
+        if not message or message.author.id in DisquidClient.admins:
             self.save_prefixes()
             self.save_admins()
             self.save_players()
             self.save_prefixes()
             self.save_history()
-            await message.channel.send('Shutting down.')
-            asyncio.get_event_loop().close()
-            while not asyncio.get_event_loop().is_closed():
-                pass
-            exit()
         else:
             await message.channel.send('Insufficient user permissions.')
+
+    @command(['exit', 'stop'])
+    async def exit_command(self, message: discord.Message):
+        """
+        Called by an admin to exit the bot.
+        """
+        if message.author.id in DisquidClient.admins:
+            await message.channel.send('Shutting down.')
+            sys.exit()
 
     @command(['help', 'h'])
     async def help_command(self, message: discord.Message):
