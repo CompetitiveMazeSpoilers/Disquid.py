@@ -408,7 +408,7 @@ class DisquidClient(discord.Client):
         """
         [main, alt] [tile, base] [(color), custom] Set player cell emoji
         """
-        processed_message = str(message.content).split(' ')
+        processed_message = str(message.content).split()
         if len(processed_message) < 4:
             await message.channel.send('Missing arguments')
         else:
@@ -416,11 +416,15 @@ class DisquidClient(discord.Client):
                 tile_type = 0
             elif processed_message[2] == 'base':
                 tile_type = 1
+            else:
+                tile_type = None
 
             if processed_message[1] == 'main':
                 tile_favor = 0
             elif processed_message[1] == 'alt':
                 tile_favor = 1
+            else:
+                tile_favor = None
 
             tile_name = processed_message[3]
             emoji_opts = {
@@ -433,7 +437,7 @@ class DisquidClient(discord.Client):
                 'blue': ':blue_square:',
                 'purple': ':purple_square:',
                 'white': ':white_large_square:',
-                'custom':  str(self.get_player(message.author.id).custom_emoji[tile_type])
+                'custom': str(self.get_player(message.author.id).custom_emoji[tile_type])
             }
             emoji_name = emoji_opts[tile_name]
 
@@ -442,15 +446,15 @@ class DisquidClient(discord.Client):
             for i in range(len(emoji_owner.emoji)):
                 for j in range(len(emoji_owner.emoji[i])):
                     if emoji_owner.emoji[i][j] == str(emoji_name):
-                        emoji_name = ''
-                        await message.channel.send('Emoji already chosen by player')
+                        emoji_name = 'duplicate'
 
-            if tile_favor is not None and tile_type is not None and emoji_name is not None and not emoji_name == '':
+            if not tile_favor and not tile_type and not emoji_name:
                 emoji_owner.emoji[tile_favor][tile_type] = str(emoji_name)
                 await message.channel.send(f'Success! {emoji_name} has been set')
-            elif not emoji_name == '':
+            elif not emoji_name == 'duplicate':
                 await message.channel.send('Arguments invalid. Check help command')
-
+            else:
+                await message.channel.send('Emoji already chosen by player')
 
     @command(['upload'])
     async def upload_emoji(self, message: discord.Message):
@@ -478,8 +482,9 @@ class DisquidClient(discord.Client):
             player_name = self.get_player(message.author.id).name
             d_guild = self.get_guild(self.debug_guild)
 
-            final_emoji = await d_guild.create_custom_emoji(name=(player_name + '_b' if slot == 'base' else player_name),
-                                                            image=image)
+            final_emoji = await d_guild.create_custom_emoji(
+                name=(player_name + '_b' if slot == 'base' else player_name),
+                image=image)
             # Check if tile or base
             if slot == 'tile':
                 self.get_player(message.author.id).custom_emoji[0] = final_emoji
@@ -540,9 +545,11 @@ class DisquidClient(discord.Client):
                             if channel_id in self.active_games:
                                 self.active_games.pop(channel_id)
                             await message.channel.send('Game Deleted.')
+
                     prefix = self.get_prefix(message.guild.id)
                     self.active_games[channel_id].being_deleted = False
-                    await message.channel.send(f'Are you sure? Type {prefix}delete_game confirm/cancel to confirm/cancel')
+                    await message.channel.send(
+                        f'Are you sure? Type {prefix}delete_game confirm/cancel to confirm/cancel')
                     asyncio.run_coroutine_threadsafe(del_check(), asyncio.get_event_loop())
                 elif len(processed_message) == 1:
                     if processed_message[0] == 'confirm' and not self.active_games[channel_id].being_deleted:
