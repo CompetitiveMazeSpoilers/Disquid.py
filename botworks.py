@@ -239,7 +239,7 @@ class DisquidClient(discord.Client):
 
         prefix = self.get_prefix(message.guild.id)
         if prefix == message.content[0]:
-            cmd = str(message.content).strip(prefix).split(' ')[0]
+            cmd = str(message.content).strip(prefix).split()[0]
             try:
                 await commands[cmd](self, message=message)
             except KeyError:
@@ -333,7 +333,7 @@ class DisquidClient(discord.Client):
                     await message.channel.send(
                         f'Challenge accepted! Game started in <#{channel.id}>')
                     await message.channel.send(
-                        f'Game creation success! Welcome to Conquid!. Type {self.get_prefix(guild)}start to begin.')
+                        f'Game creation success! Welcome to Conquid!. Type {self.get_prefix(guild.id)}start to begin.')
                     self.active_challenges.remove(c)
 
         else:
@@ -356,11 +356,42 @@ class DisquidClient(discord.Client):
             for substring in board_string.split('#msg'):
                 await message.channel.send(substring)
             await message.channel.send(
-                f'It is <@{target_game.players[target_game.cache.current_player - 1].uid}>\'s turn! Do \'{self.get_prefix(message.guild)}'
+                f'It is <@{target_game.players[target_game.cache.current_player - 1].uid}>\'s turn! Do \'{self.get_prefix(message.guild.id)}'
                 f'help moves\' for move help')
             return
         await message.channel.send(
-            f'No waiting game found, please use {self.get_prefix(message.guild)}challenge to make one.')
+            f'No waiting game found, please use {self.get_prefix(message.guild.id)}challenge to make one.')
+
+    @command(['preview', 'previewmove', 'p'])
+    async def preview_move(self, message: discord.Message):
+        """
+        [any move] Previews a move by sending it to your dms before you make it.
+        """
+        processed_message = str(message.content).split()
+        del processed_message[0]
+        game = self.active_games[message.channel.id]
+        cache = game.cache
+        try:
+            move_string = ''
+            for sub in processed_message:
+                move_string += f' {sub}'
+            move = Utility.read_move(game.cache.current_player, move_string)
+            for substring in game.get_board_string(move(cache.latest, validate=True)).split('#msg'):
+                await message.author.send(substring)
+            await message.channel.send('Move Success! Sent to your DMs.')
+            # Test for win condition
+            if move.move_type == 'Q':
+                await message.author.send(
+                    'You would win! Though, I don\'t know how given you weren\'t smart enough to picture a win move.')
+        except InvalidMove:
+            move_prefix = processed_message[0]
+            if move_prefix == 'V':
+                vanquish_spots: str = Utility.format_locations(cache.latest.vanquish_spots(cache.current_player),
+                                                               game)
+                await message.channel.send('Vanquish options:\n' + vanquish_spots)
+            else:
+                await message.channel.send(
+                    f'Not a valid move! Use \'{self.get_prefix(message.guild.id)}help moves\' to get help.')
 
     @command(['refresh', 'reprint', 'update'])
     async def reprint_board(self, message: discord.Message):
@@ -373,11 +404,11 @@ class DisquidClient(discord.Client):
             await message.channel.send('No board to update here.')
 
     @command(['upload'])
-    async def upload_emoji(self, message):
+    async def upload_emoji(self, message: discord.Message):
         """
         [*, tile, base] Upload attached image as custom cell emoji
         """
-        processed_message = str(message.content).split(' ')
+        processed_message = str(message.content).split()
         attachments = message.attachments
         if len(attachments) == 0:
             await message.channel.send('No image provided')
@@ -399,11 +430,11 @@ class DisquidClient(discord.Client):
             await message.channel.send(f'New emoji :{final_emoji}: uploaded')
 
     @command(['delete', 'del'])
-    async def delete_emoji(self, message):
+    async def delete_emoji(self, message: discord.Message):
         """
         [*, tile, base] Delete custom emoji to free up slot
         """
-        processed_message = str(message.content).split(' ')
+        processed_message = str(message.content).split()
         emoji_owner = self.get_player(message.author.id)
 
         if len(processed_message) == 1:
@@ -425,8 +456,40 @@ class DisquidClient(discord.Client):
             await c_emoji.delete()
             await message.channel.send(f'{emoji_owner.name} custom {tile_type} has been deleted')
 
+    @command(['delgame', 'del'])
+    async def delete_game(self, message: discord.Message):
+        """
+        Will trash the current game in the channel, usable by admins only.
+        DOES NOT MOVE GAME TO HISTORY.
+        """
+        channel_id = message.channel.id
+        processed_message = str(message.content).split()
+        del processed_message[0]
+        if channel_id in self.active_games:
+            if message.author.id in DisquidClient.admins:
+                if len(processed_message) == 0:
+                    async def del_check():
+                        while not self.active_games[channel_id].being_deleted:
+                            if channel_id in self.active_games:
+                                self.active_games.pop(channel_id)
+                            await message.channel.send('Game Deleted.')
+                    prefix = self.get_prefix(message.guild.id)
+                    self.active_games[channel_id].being_deleted = False
+                    await message.channel.send(f'Are you sure? Type {prefix}delete_game confirm/cancel to confirm/cancel')
+                    asyncio.run_coroutine_threadsafe(del_check(), asyncio.get_event_loop())
+                elif len(processed_message) == 1:
+                    if processed_message[0] == 'confirm' and not self.active_games[channel_id].being_deleted:
+                        self.active_games[channel_id].being_deleted = True
+                    elif processed_message[0] == 'cancel' and not self.active_games[channel_id].being_deleted:
+                        self.active_games[channel_id].being_deleted = 'No'
+                await message.channel.send('Invalid')
+            else:
+                await message.channel.send('Insufficient user permissions.')
+        else:
+            await message.channel.send('No game to delete in this channel.')
+
     @command(['exit'])
-    async def on_exit(self, message):
+    async def on_exit(self, message: discord.Message):
         """
         Called by an admin to exit the bot.
         """
@@ -437,29 +500,29 @@ class DisquidClient(discord.Client):
             self.save_prefixes()
             self.save_history()
             await message.channel.send('Shutting down.')
+            asyncio.get_event_loop().close()
+            while not asyncio.get_event_loop().is_closed():
+                pass
             exit()
         else:
             await message.channel.send('Insufficient user permissions.')
 
     @command(['help', 'h'])
-    async def help_command(self, message):
+    async def help_command(self, message: discord.Message):
         """
         [*, moves] Provides descriptions of commands.
         """
-        processed_message = str(message.content).split(' ')
+        processed_message = str(message.content).split()
         if len(processed_message) == 1:
+            active_descs = {}
             embed_var = discord.Embed(title="Help Commands", color=0xc0365e)
             for key in commands:
                 aliases = []
                 for k in commands:
                     aliases.append(k) if commands[key] == commands[k] else aliases
-                field = {
-                    'inline': False,
-                    'name': str(aliases),
-                    'value': str(commands[key].__doc__)
-                }
-                if field not in embed_var.fields:
-                    embed_var.fields.append(field)
+                if str(aliases) not in active_descs:
+                    active_descs[str(aliases)] = commands[key].__doc__
+                    embed_var.add_field(name=str(aliases), value=str(commands[key].__doc__), inline=False)
             await message.channel.send(embed=embed_var)
         else:
             if processed_message[1] == 'moves':
@@ -473,7 +536,7 @@ class DisquidClient(discord.Client):
                     'Q -- Conquest, this move is required to win the game, used when the attempting player'
                     'believes they have a path to the enemy base.')
             else:
-                await message.channel.send('No help found.')
+                await message.channel.send(f'No help found for \'{processed_message[1]}\'.')
 
     async def update_board(self, game):
         channel = self.get_channel(game.channel_id)

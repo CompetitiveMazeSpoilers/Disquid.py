@@ -70,9 +70,17 @@ class Game(object):
                 raise InvalidGameSetup
         self.history = History(r, c, bases, [])
         self.cache = Cache(self.history)
+        self.being_deleted = 'No'
 
     def __str__(self):
         board_string = str(self.cache.latest)
+        for i, player in enumerate(self.players):
+            board_string = board_string.replace(f'p{i + 1}b', player.emoji[i][1])
+            board_string = board_string.replace(f'p{i + 1}', player.emoji[i][0])
+        return board_string
+
+    def get_board_string(self, board: Board):
+        board_string = str(board)
         for i, player in enumerate(self.players):
             board_string = board_string.replace(f'p{i + 1}b', player.emoji[i][1])
             board_string = board_string.replace(f'p{i + 1}', player.emoji[i][0])
