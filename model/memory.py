@@ -72,20 +72,8 @@ class Cache(object):
         self.latest = self.save[-1]
         self.move = None
 
-    # def play_back(self):
-    #    if self.nstate > 0:
-    #       self.nstate -= 1
-    #        self.current_player = 3 - self.current_player
-    #    self.boardview.set_view(self.save[self.nstate], self.current_player)
-
-    # def play_forward(self):
-    #    if self.nstate < len(self.save) - 1:
-    #        self.nstate += 1
-    #        self.current_player = 3 - self.current_player
-    #    if self.at_last_state() and self.hist.is_finished():
-    #        self.boardview.set_view(self.save[self.nstate], 3 - self.current_player, win=True)
-    #    else:
-    #        self.boardview.set_view(self.save[self.nstate], self.current_player)
+    def preview(self, move: Move):
+        return move(self.latest, validate=True)
 
     def receive(self, move: Move):
         """

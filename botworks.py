@@ -234,11 +234,11 @@ class DisquidClient(discord.Client):
         :param message: Message Class found at https://discordpy.readthedocs.io/en/latest/api.html#message.
         """
 
-        if message.author.id == self.user.id:
+        if not self.is_ready() or not message.content or message.author.id == self.user.id:
             return
 
         prefix = self.get_prefix(message.guild.id)
-        if self.is_ready() and prefix == message.content[0]:
+        if prefix == message.content[0]:
             cmd = str(message.content).strip(prefix).split(' ')[0]
             try:
                 await commands[cmd](self, message=message)
@@ -459,16 +459,18 @@ class DisquidClient(discord.Client):
         """
         processed_message = str(message.content).split(' ')
         if len(processed_message) == 1:
-            current_list = ''
             embed_var = discord.Embed(title="Help Commands", color=0xc0365e)
             for key in commands:
                 aliases = []
                 for k in commands:
                     aliases.append(k) if commands[key] == commands[k] else aliases
-                new_line = str(aliases) + str(commands[key].__doc__)
-                current_list += new_line
-                if new_line not in current_list:
-                    embed_var.add_field(name=str(aliases), value=str(commands[key].__doc__))
+                field = {
+                    'inline': False,
+                    'name': str(aliases),
+                    'value': str(commands[key].__doc__)
+                }
+                if field not in embed_var.fields:
+                    embed_var.fields.append(field)
             await message.channel.send(embed=embed_var)
         else:
             if processed_message[1] == 'moves':
