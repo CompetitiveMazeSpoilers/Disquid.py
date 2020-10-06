@@ -234,11 +234,11 @@ class DisquidClient(discord.Client):
         :param message: Message Class found at https://discordpy.readthedocs.io/en/latest/api.html#message.
         """
 
-        if message.author.id == self.user.id:
+        if not self.is_ready() or not message.content or message.author.id == self.user.id:
             return
 
         prefix = self.get_prefix(message.guild.id)
-        if self.is_ready() and prefix == message.content[0]:
+        if prefix == message.content[0]:
             cmd = str(message.content).strip(prefix).split(' ')[0]
             try:
                 await commands[cmd](self, message=message)
