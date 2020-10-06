@@ -372,6 +372,55 @@ class DisquidClient(discord.Client):
         else:
             await message.channel.send('No board to update here.')
 
+    @command(['set_cell', 'set'])
+    async def set_tile(self, message):
+        """
+        [main, alt] [tile, base] [(color), custom] Set player cell emoji
+        """
+        processed_message = str(message.content).split(' ')
+        if len(processed_message) < 4:
+            await message.channel.send('Missing arguments')
+        else:
+            if processed_message[2] == 'tile':
+                tile_type = 0
+            elif processed_message[2] == 'base':
+                tile_type = 1
+
+            if processed_message[1] == 'main':
+                tile_favor = 0
+            elif processed_message[1] == 'alt':
+                tile_favor = 1
+
+            tile_name = processed_message[3]
+            emoji_opts = {
+                'black': ':black_large_square:',
+                'brown': ':brown_square:',
+                'red': ':red_square:',
+                'orange': ':orange_square:',
+                'yellow': ':yellow_square:',
+                'green': ':green_square:',
+                'blue': ':blue_square:',
+                'purple': ':purple_square:',
+                'white': ':white_large_square:',
+                'custom':  str(self.get_player(message.author.id).custom_emoji[tile_type])
+            }
+            emoji_name = emoji_opts[tile_name]
+
+            # check if duplicate
+            emoji_owner = self.get_player(message.author.id)
+            for i in range(len(emoji_owner.emoji)):
+                for j in range(len(emoji_owner.emoji[i])):
+                    if emoji_owner.emoji[i][j] == str(emoji_name):
+                        emoji_name = ''
+                        await message.channel.send('Emoji already chosen by player')
+
+            if tile_favor is not None and tile_type is not None and emoji_name is not None and not emoji_name == '':
+                emoji_owner.emoji[tile_favor][tile_type] = str(emoji_name)
+                await message.channel.send(f'Success! {emoji_name} has been set')
+            elif not emoji_name == '':
+                await message.channel.send('Arguments invalid. Check help command')
+
+
     @command(['upload'])
     async def upload_emoji(self, message):
         """
@@ -432,9 +481,16 @@ class DisquidClient(discord.Client):
             await message.channel.send('No emoji to delete')
         else:
             c_emoji = emoji_owner.custom_emoji[emoji_index]
+            # replace custom emoji if in use
+            for i in range(len(emoji_owner.emoji)):
+                for j in range(len(emoji_owner.emoji[i])):
+                    if emoji_owner.emoji[i][j] == str(c_emoji):
+                        emoji_owner.emoji[i][j] = Player.default_emoji[i][j]
+            # remove emoji from storage server
             await c_emoji.delete()
+            # remove emoji from player's custom list
             emoji_owner.custom_emoji[emoji_index] = ''
-            await message.channel.send(f'{emoji_owner.name} custom {tile_type} has been deleted')
+            await message.channel.send(f'{emoji_owner.name} custom {tile_type} slot has been deleted')
 
     @command(['exit'])
     async def on_exit(self, message):
