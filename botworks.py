@@ -379,24 +379,34 @@ class DisquidClient(discord.Client):
         """
         processed_message = str(message.content).split(' ')
         attachments = message.attachments
+        slot = None
+        if len(processed_message) == 1 or processed_message[1] == 'tile':
+            slot_empty = self.get_player(message.author.id).custom_emoji[0] == ''
+            slot = 'tile'
+        elif processed_message[1] == 'base':
+            slot_empty = self.get_player(message.author.id).custom_emoji[1] == ''
+            slot = 'base'
+
         if len(attachments) == 0:
             await message.channel.send('No image provided')
+        elif slot is None:
+            await message.channel.send('Invalid arguments.')
+        elif not slot_empty:
+            await message.channel.send('Slot is not empty. use the delete command.')
         else:
             image = await attachments[0].read()
             player_name = self.get_player(message.author.id).name
             d_guild = self.get_guild(self.debug_guild)
 
-            set_base = processed_message[1] == 'base'
-
-            final_emoji = await d_guild.create_custom_emoji(name=(player_name if set_base else player_name + '_b'),
+            final_emoji = await d_guild.create_custom_emoji(name=(player_name + '_b' if slot == 'base' else player_name),
                                                             image=image)
             # Check if tile or base
-            if len(processed_message) == 1 or processed_message[1] == 'tile':
+            if slot == 'tile':
                 self.get_player(message.author.id).custom_emoji[0] = final_emoji
-            elif set_base:
+            elif slot == 'base':
                 self.get_player(message.author.id).custom_emoji[1] = final_emoji
 
-            await message.channel.send(f'New emoji :{final_emoji}: uploaded')
+            await message.channel.send(f'New emoji {final_emoji} uploaded')
 
     @command(['delete', 'del'])
     async def delete_emoji(self, message):
@@ -418,11 +428,12 @@ class DisquidClient(discord.Client):
             await message.channel.send(f'Invalid Argument: \'{processed_message[1]}\'')
             return
 
-        if emoji_owner.custom_emoji[emoji_index] is None:
+        if emoji_owner.custom_emoji[emoji_index] == '':
             await message.channel.send('No emoji to delete')
         else:
             c_emoji = emoji_owner.custom_emoji[emoji_index]
             await c_emoji.delete()
+            emoji_owner.custom_emoji[emoji_index] = ''
             await message.channel.send(f'{emoji_owner.name} custom {tile_type} has been deleted')
 
     @command(['exit'])

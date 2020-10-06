@@ -21,7 +21,7 @@ class Player(object):
         self.uid = uid
         self.rank = rank
         self.emoji = emoji
-        self.custom_emoji = None
+        self.custom_emoji = ['', '']
         self.name = name
 
     def __eq__(self, other):
