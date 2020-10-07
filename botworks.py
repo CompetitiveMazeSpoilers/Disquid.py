@@ -706,7 +706,7 @@ class DisquidClient(discord.Client):
         del processed_message[0]
         if channel_id in self.active_games:
             if message.author.guild_permissions.administrator:
-                self.active_games.remove(channel_id)
+                self.active_games.pop(channel_id)
                 await message.channel.send('Game Deleted.')
             else:
                 await message.channel.send('Insufficient user permissions.')
@@ -720,14 +720,31 @@ class DisquidClient(discord.Client):
         valid moves in the channel and building a board from it.
         """
         channel_id = message.channel.id
+        prefix = self.get_prefix(message.guild.id)
         if message.mentions and len(message.mentions) == 2:
-            self.active_games.pop(channel_id)
-            self.active_games[message.channel.id] = Game(channel_id, [message.mentions[0].id, message.mentions[1].id])
+            await self.delete_game(message)
+            self.active_games[message.channel.id] = Game(channel_id, [self.get_player(message.mentions[0].id), self.get_player(message.mentions[1].id)])
             messages = await message.channel.history(limit=None, oldest_first=True).flatten()
-            print(messages)
+
+            def redex_chk():
+                possible_strs = [f'{prefix}reindex', f'{prefix}rebuild_game']
+                for s in possible_strs:
+                    if s == possible_strs[slice(len(s))]:
+                        return True
+                return False
+
+            del_mode = False
             for msg in messages:
-                if self.get_prefix(msg.channel.id) not in str(message.content):
-                    await message.channel.send(msg.content())
+                if self.get_prefix(msg.guild.id) not in str(msg.content):
+                    if del_mode:
+                        pass
+                        print('I deleted')
+                        #await msg.delete()
+                    else:
+                        #await msg.delete()
+                        await self.on_message(msg)
+                elif redex_chk():
+                    del_mode = True
         else:
             await message.channel.send(
                 'Invalid arguments, please mention both players in order for the command to be successful.')
