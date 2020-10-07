@@ -333,6 +333,13 @@ class DisquidClient(discord.Client):
             else:
                 await message.channel.send(f'No help found for \'{processed_message[0]}\'.')
 
+    @command()
+    async def ping(self, message: discord.Message):
+        """
+        PONG! Sends the bot's latency.
+        """
+        await message.channel.send(f'{self.latency*1000}ms')
+
     @command(['changeprefix', 'cp'])
     async def change_prefix(self, message: discord.message):
         """
@@ -346,6 +353,7 @@ class DisquidClient(discord.Client):
                 return
             self.prefixes.pop(message.guild.id)
             self.prefixes[message.guild.id] = processed_message[0]
+            message.guild.me.nick = f'[{processed_message[0]}]' + message.guild.me.nick
             await message.channel.send(f'Prefix is now \'{processed_message[0]}\'')
         else:
             await message.channel.send('Only administrators may do this.')
@@ -711,17 +719,17 @@ class DisquidClient(discord.Client):
         Will trash the current game in the channel, usable by admins only.
         DOES NOT MOVE GAME TO HISTORY.
         """
-        channel_id = message.channel.id
-        processed_message = str(message.content).split()
-        del processed_message[0]
-        if channel_id in self.active_games:
-            if message.author.guild_permissions.administrator:
+        if message.author.guild_permissions.administrator:
+            channel_id = message.channel.id
+            processed_message = str(message.content).split()
+            del processed_message[0]
+            if channel_id in self.active_games:
                 self.active_games.pop(channel_id)
                 await message.channel.send('Game Deleted.')
             else:
-                await message.channel.send('Insufficient user permissions.')
+                await message.channel.send('No game to delete in this channel.')
         else:
-            await message.channel.send('No game to delete in this channel.')
+            await message.channel.send('Insufficient user permissions.')
 
     @command(['reindex'])
     async def reindex_game(self, message: discord.Message):
@@ -729,43 +737,50 @@ class DisquidClient(discord.Client):
         [@mention (p1), @mention (p2), bool (replay)] rebuilds the current game channel if something is broken by reading all of the
         valid moves in the channel and building a board from it.
         """
-        channel_id = message.channel.id
-        prefix = self.get_prefix(message.guild.id)
-        processed_message = str(message.content).split()
-        del processed_message[0]
-        if len(processed_message) == 3:
-            if processed_message[2].lower() == 'true':
-                replay = True
+        if message.author.guild_permissions.administrator:
+            channel_id = message.channel.id
+            prefix = self.get_prefix(message.guild.id)
+            processed_message = str(message.content).split()
+            del processed_message[0]
+            if len(processed_message) == 3:
+                if processed_message[2].lower() == 'true':
+                    replay = True
+                else:
+                    replay = False
             else:
                 replay = False
+            if message.mentions and len(message.mentions) == 2:
+                await self.delete_game(message)
+                self.active_games[message.channel.id] = Game(channel_id, [self.get_player(message.mentions[0].id),
+                                                                          self.get_player(message.mentions[1].id)])
+            elif len(message.mentions) == 1 and message.mentions[0].id == message.author.id:
+                await self.delete_game(message)
+                self.active_games[message.channel.id] = Game(channel_id, [self.get_player(message.mentions[0].id),
+                                                                          self.get_player(message.mentions[0].id)])
+            else:
+                await message.channel.send(
+                    'Invalid arguments, please mention both players in order for the command to be successful.')
+                return
+            await message.channel.send('Beginning of reindexed game.')
+            async for msg in message.channel.history(limit=None, oldest_first=True):
+                if prefix != str(msg.content)[:len(prefix)]:
+                    if not msg.author.bot and replay:
+                        await msg.channel.send(f'{msg.author.name}: {msg.content}')
+                    await self.on_message(msg, not replay)
+            await message.channel.send('Reindex complete.')
         else:
-            replay = False
-        if message.mentions and len(message.mentions) == 2:
-            await self.delete_game(message)
-            self.active_games[message.channel.id] = Game(channel_id, [self.get_player(message.mentions[0].id),
-                                                                      self.get_player(message.mentions[1].id)])
-        elif len(message.mentions) == 1 and message.mentions[0].id == message.author.id:
-            await self.delete_game(message)
-            self.active_games[message.channel.id] = Game(channel_id, [self.get_player(message.mentions[0].id),
-                                                                      self.get_player(message.mentions[0].id)])
-        else:
-            await message.channel.send(
-                'Invalid arguments, please mention both players in order for the command to be successful.')
-            return
-        await message.channel.send('Beginning of reindexed game.')
-        async for msg in message.channel.history(limit=None, oldest_first=True):
-            if prefix != str(msg.content)[:len(prefix)]:
-                if not msg.author.bot and replay:
-                    await msg.channel.send(f'{msg.author.name}: {msg.content}')
-                await self.on_message(msg, not replay)
-        await message.channel.send('Reindex complete.')
+            await message.channel.send('Insufficient user permissions.')
 
     @command(['save'], True)
     async def save(self, message: discord.Message = None, bypass: bool = False):
         """
         Called by a bot admin to save all files in the bot.
         """
-        if bypass or message.author.id in DisquidClient.admins:
+        if bypass:
+            for fun in save_actions:
+                fun(self)
+            return
+        if message.author.id in DisquidClient.admins:
             for fun in save_actions:
                 fun(self)
             await message.channel.send('Save Successful.')
@@ -779,23 +794,24 @@ class DisquidClient(discord.Client):
         """
         if message.author.id in DisquidClient.admins:
             await message.channel.send('Shutting down.')
-            await self.logout()
+            await self.close()
         else:
-            await message.channel.send('Insufficient User Permissions')
+            await message.channel.send('Insufficient user permissions')
 
     @command(['op'], True)
     async def promote(self, message: discord.Message):
         """
         [@mention] Called by a bot admin to promote a new bot admin.
         """
-        mentions = message.mentions
-        if message.author.id not in DisquidClient.admins:
-            return
-        if len(mentions) == 0:
-            await message.channel.send('No argument provided!')
-        for mention in mentions:
-            DisquidClient.admins.append(mention.id)
-            await message.channel.send(f'@<{mention.id}> is now an admin.')
+        if message.author.id in DisquidClient.admins:
+            mentions = message.mentions
+            if len(mentions) == 0:
+                await message.channel.send('No argument provided!')
+            for mention in mentions:
+                DisquidClient.admins.append(mention.id)
+                await message.channel.send(f'@<{mention.id}> is now an admin.')
+        else:
+            await message.channel.send('Insufficient user permissions.')
 
     @command(['deop'], True)
     async def demote(self, message: discord.Message):
@@ -803,13 +819,14 @@ class DisquidClient(discord.Client):
         [@mention] Called by a bot admin to promote a new bot admin.
         """
         mentions = message.mentions
-        if message.author.id not in DisquidClient.admins:
-            return
-        if len(mentions) == 0:
-            await message.channel.send('No argument provided!')
-        for mention in mentions:
-            DisquidClient.admins.remove(mention.id)
-            await message.channel.send(f'@<{mention.id}> is no longer an admin.')
+        if message.author.id in DisquidClient.admins:
+            if len(mentions) == 0:
+                await message.channel.send('No argument provided!')
+            for mention in mentions:
+                DisquidClient.admins.remove(mention.id)
+                await message.channel.send(f'@<{mention.id}> is no longer an admin.')
+        else:
+            await message.channel.send('Insufficient user permissions.')
 
     async def update_board(self, game):
         channel = self.get_channel(game.channel_id)
@@ -844,6 +861,10 @@ class DisquidClient(discord.Client):
 
         await channel.send(str(game))
         asyncio.run_coroutine_threadsafe(channel_del(channel), asyncio.get_event_loop())
+
+    async def close(self):
+        await self.save(bypass=True)
+        await super(DisquidClient, self).close()
 
 
 if __name__ == '__main__':
