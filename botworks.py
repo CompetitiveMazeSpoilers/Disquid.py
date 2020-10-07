@@ -887,7 +887,6 @@ class DisquidClient(discord.Client):
             await channel.delete(reason='Game Complete')
 
         await self.update_board(game, True)
-        # await channel.send(str(game))
         asyncio.run_coroutine_threadsafe(channel_del(), asyncio.get_event_loop())
 
     async def on_draw(self, game):
