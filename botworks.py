@@ -266,7 +266,7 @@ class DisquidClient(discord.Client):
                 print('User tried nonexistent command')
         else:
             if message.channel.id not in self.active_games or not str(message.content)[0] in ['A', 'C', 'V', 'Q'] \
-                    or len(message.content.split()) > 3:
+                    or len(message.content.split()) > 4:
                 return
             # User is likely attempting a move under these conditions
             game = self.active_games[message.channel.id]
