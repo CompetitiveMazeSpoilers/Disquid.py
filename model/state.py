@@ -309,7 +309,7 @@ class Board(list):
                 # trace path if found
                 if self[i][j].base and self[i][j].player == enemy:
                     while curr != start:
-                        self[i][j].base = True
+                        self[curr[0]][curr[1]].base = True
                         curr = prev[curr[0]][curr[1]]
                     return
         # no path found
