@@ -748,7 +748,7 @@ class DisquidClient(discord.Client):
                 self.active_games.pop(channel_id)
                 await message.channel.send('Game Deleted.')
 
-                async def channel_del(chl):
+                async def channel_del():
                     await message.channel.send('Channel will be deleted in 1hr, and has been moved to game history.')
                     await asyncio.sleep(3600)
                     await message.channel.delete(reason='Game Complete')
