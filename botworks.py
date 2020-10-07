@@ -1,5 +1,6 @@
 import asyncio
 import pickle
+import sys
 
 from model.game import *
 
@@ -175,7 +176,7 @@ class DisquidClient(discord.Client):
         try:
             return self.players[uid]
         except KeyError:  # in case of failure of the on_guild_join event
-            self.players[uid] = Player(uid, len(self.players))
+            self.players[uid] = Player(uid, len(self.players) + 1)
             return self.get_player(uid)
 
     def search_name(self, name: str) -> int:
@@ -258,7 +259,7 @@ class DisquidClient(discord.Client):
             return
 
         prefix = self.get_prefix(message.guild.id)
-        if prefix == message.content[0]:
+        if len(str(message.content)) >= len(prefix) and prefix == str(message.content[0:len(prefix)]):
             cmd = str(message.content).strip(prefix).split()[0]
             try:
                 await commands[cmd](self, message=message)
@@ -300,13 +301,14 @@ class DisquidClient(discord.Client):
         """
         [*, moves] Provides descriptions of commands.
         """
+        is_admin = message.author.id in DisquidClient.admins
         processed_message = str(message.content).split()
         del processed_message[0]
         if len(processed_message) == 0:
             active_descs = {}
             embed_var = discord.Embed(title="Help Commands", color=0xc0365e)
             for key in commands:
-                if not commands[key].hidden:
+                if is_admin or not commands[key].hidden:
                     aliases = []
                     for k in commands:
                         aliases.append(k) if commands[key] == commands[k] else aliases
@@ -331,7 +333,7 @@ class DisquidClient(discord.Client):
     @command(['changeprefix', 'cp'])
     async def change_prefix(self, message: discord.message):
         """
-        [prefix] Usable by admins to change their prefix.
+        [prefix] Usable by admins to change the bot's server prefix.
         """
         if message.author.guild_permissions.administrator:
             processed_message = str(message.content).split()
@@ -367,7 +369,7 @@ class DisquidClient(discord.Client):
             return
 
         if prof_id not in self.players:
-            await message.channel.send('Player doesn\'t exist.')
+            await message.channel.send('Player does not exist.')
 
         player = self.players[prof_id]
         embed_var = discord.Embed(title=f'{player.name}\'s profile.', color=0xc0365e)
@@ -397,7 +399,11 @@ class DisquidClient(discord.Client):
                 await message.channel.send('Cannot challenge someone with a default name by name.')
                 return
             p2_id = self.search_name(processed_message[0])
-            chal = Challenge(self.get_player(p1_id), self.get_player(p2_id))
+            if p2_id:
+                chal = Challenge(self.get_player(p1_id), self.get_player(p2_id))
+            else:
+                await message.channel.send('Player does not exist!')
+                return
         else:
             await message.channel.send('Too many or too few players mentioned/named, '
                                        'challenge failed.')
@@ -430,7 +436,11 @@ class DisquidClient(discord.Client):
                 await message.channel.send('Cannot challenge someone with a default name by name.')
                 return
             p1_id = self.search_name(processed_message[0])
-            temp_chal = Challenge(self.get_player(p1_id), self.get_player(p2_id))
+            if p1_id:
+                temp_chal = Challenge(self.get_player(p1_id), self.get_player(p2_id))
+            else:
+                message.channel.send('Player does not exist!')
+                return
         else:
             await message.channel.send('Too many or too few players mentioned, '
                                        'accept failed.')
@@ -685,7 +695,7 @@ class DisquidClient(discord.Client):
                     self.get_player(uid).custom_emoji[1].edit(str(processed_message[0]))
         await message.channel.send('Name changed successfully!')
 
-    @command(['delgame', 'del'], True)
+    @command(['delgame', 'del'])
     async def delete_game(self, message: discord.Message):
         """
         Will trash the current game in the channel, usable by admins only.
@@ -696,28 +706,31 @@ class DisquidClient(discord.Client):
         del processed_message[0]
         if channel_id in self.active_games:
             if message.author.guild_permissions.administrator:
-                if len(processed_message) == 0:
-                    async def del_check():
-                        while not self.active_games[channel_id].being_deleted:
-                            if channel_id in self.active_games:
-                                self.active_games.pop(channel_id)
-                            await message.channel.send('Game Deleted.')
-
-                    prefix = self.get_prefix(message.guild.id)
-                    self.active_games[channel_id].being_deleted = False
-                    await message.channel.send(
-                        f'Are you sure? Type {prefix}delete_game confirm/cancel to confirm/cancel')
-                    asyncio.run_coroutine_threadsafe(del_check(), asyncio.get_event_loop())
-                elif len(processed_message) == 1:
-                    if processed_message[0] == 'confirm' and not self.active_games[channel_id].being_deleted:
-                        self.active_games[channel_id].being_deleted = True
-                    elif processed_message[0] == 'cancel' and not self.active_games[channel_id].being_deleted:
-                        self.active_games[channel_id].being_deleted = 'No'
-                await message.channel.send('Invalid')
+                self.active_games.remove(channel_id)
+                await message.channel.send('Game Deleted.')
             else:
                 await message.channel.send('Insufficient user permissions.')
         else:
             await message.channel.send('No game to delete in this channel.')
+
+    @command(['reindex'])
+    async def reindex_game(self, message: discord.Message):
+        """
+        [@mention (p1), @mention (p2)] rebuilds the current game channel if something is broken by reading all of the
+        valid moves in the channel and building a board from it.
+        """
+        channel_id = message.channel.id
+        if message.mentions and len(message.mentions) == 2:
+            self.active_games.pop(channel_id)
+            self.active_games[message.channel.id] = Game(channel_id, [message.mentions[0].id, message.mentions[1].id])
+            messages = await message.channel.history(limit=None, oldest_first=True).flatten()
+            print(messages)
+            for msg in messages:
+                if self.get_prefix(msg.channel.id) not in str(message.content):
+                    await message.channel.send(msg.content())
+        else:
+            await message.channel.send(
+                'Invalid arguments, please mention both players in order for the command to be successful.')
 
     @command(['save'], True)
     async def save(self, message: discord.Message = None, bypass: bool = False):
@@ -739,7 +752,7 @@ class DisquidClient(discord.Client):
         if message.author.id in DisquidClient.admins:
             await message.channel.send('Shutting down.')
             await self.logout()
-            exit()
+            sys.exit()
         else:
             await message.channel.send('Insufficient User Permissions')
 
@@ -780,7 +793,7 @@ class DisquidClient(discord.Client):
     async def on_win(self, game):
         channel = self.get_channel(game.channel_id)
         await channel.send(f'<@{game.players[game.cache.current_player - 1].uid}> WINS!')
-        self.active_games.pop(game)
+        self.active_games.remove(game)
         self.game_history.append(game)
 
         async def channel_del(chl):
