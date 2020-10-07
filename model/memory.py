@@ -66,9 +66,7 @@ class Cache(object):
     def __init__(self, history: History):
         self.hist = history
         self.current_player = 1
-        self.nstate = 0
         self.save = history.board_history()
-        self.nstate = len(self.save) - 1
         self.latest = self.save[-1]
         self.move = None
 
@@ -83,9 +81,7 @@ class Cache(object):
             return
         self.latest = move(self.latest, validate=True)
         self.move = move
-        # Confirm the latest move and test for a win condition.
         if not self.move:
             return
         self.save.append(self.latest)
         self.hist.store(self.move)
-        self.nstate += 1

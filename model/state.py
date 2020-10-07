@@ -86,6 +86,8 @@ def generate_flag_array() -> [[Flag]]:
                     flag_code = split_string[1]
                     temp_arr.append((aliases, f':{flag_code}:'))
             final_board_arr.append(temp_arr)
+        if not os.path.exists(default_board_file.parents[0]):
+            os.mkdir(default_board_file.parents[0])
         with open(default_board_file, 'w') as f:
             json.dump(final_board_arr, f, indent=4)
         return final_board_arr
