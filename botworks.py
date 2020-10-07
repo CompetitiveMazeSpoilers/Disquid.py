@@ -73,7 +73,7 @@ class DisquidClient(discord.Client):
     Documentation Quick Reference https://discordpy.readthedocs.io/en/latest/api.html#
     """
 
-    default_prefix = '%'
+    default_prefix = '*'
     data_path = Path('data/')
     auto_save_duration = 300  # in seconds
     admins: []
