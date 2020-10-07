@@ -583,7 +583,7 @@ class DisquidClient(discord.Client):
                         emoji_name = 'duplicate'
 
             if tile_favor and tile_type and emoji_name:
-                emoji_owner.emoji[tile_favor-1][tile_type-1] = str(emoji_name)
+                emoji_owner.emoji[tile_favor - 1][tile_type - 1] = str(emoji_name)
                 await message.channel.send(f'Success! {emoji_name} has been set')
             elif emoji_name == 'duplicate':
                 await message.channel.send('Emoji already chosen by player')
@@ -723,31 +723,35 @@ class DisquidClient(discord.Client):
         prefix = self.get_prefix(message.guild.id)
         if message.mentions and len(message.mentions) == 2:
             await self.delete_game(message)
-            self.active_games[message.channel.id] = Game(channel_id, [self.get_player(message.mentions[0].id), self.get_player(message.mentions[1].id)])
-            messages = await message.channel.history(limit=None, oldest_first=True).flatten()
-
-            def redex_chk():
-                possible_strs = [f'{prefix}reindex', f'{prefix}rebuild_game']
-                for s in possible_strs:
-                    if s == possible_strs[slice(len(s))]:
-                        return True
-                return False
-
-            del_mode = False
-            for msg in messages:
-                if self.get_prefix(msg.guild.id) not in str(msg.content):
-                    if del_mode:
-                        pass
-                        print('I deleted')
-                        #await msg.delete()
-                    else:
-                        #await msg.delete()
-                        await self.on_message(msg)
-                elif redex_chk():
-                    del_mode = True
+            self.active_games[message.channel.id] = Game(channel_id, [self.get_player(message.mentions[0].id),
+                                                                      self.get_player(message.mentions[1].id)])
+        elif len(message.mentions) == 1 and message.mentions[0].id == message.author.id:
+            self.active_games[message.channel.id] = Game(channel_id, [self.get_player(message.mentions[0].id),
+                                                                      self.get_player(message.mentions[0].id)])
         else:
             await message.channel.send(
                 'Invalid arguments, please mention both players in order for the command to be successful.')
+        messages = await message.channel.history(limit=None, oldest_first=True).flatten()
+
+        def redex_chk():
+            possible_strs = [f'{prefix}reindex', f'{prefix}rebuild_game']
+            for s in possible_strs:
+                if s == possible_strs[slice(len(s))]:
+                    return True
+            return False
+
+        del_mode = False
+        for msg in messages:
+            if self.get_prefix(msg.guild.id) not in str(msg.content):
+                if del_mode:
+                    pass
+                    print('I deleted')
+                    # await msg.delete()
+                else:
+                    # await msg.delete()
+                    await self.on_message(msg)
+            elif redex_chk():
+                del_mode = True
 
     @command(['save'], True)
     async def save(self, message: discord.Message = None, bypass: bool = False):
