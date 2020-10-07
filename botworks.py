@@ -1,6 +1,5 @@
 import asyncio
 import pickle
-import sys
 
 from model.game import *
 
@@ -248,19 +247,20 @@ class DisquidClient(discord.Client):
         """
         self.prefixes[guild.id] = self.default_prefix
 
-    async def on_message(self, message: discord.Message):
+    async def on_message(self, message: discord.Message, reindexing=False):
         """
         Here will go the processing for breaking down messages into component parts.
         Likely used for start and stop game commands.
         :param message: Message Class found at https://discordpy.readthedocs.io/en/latest/api.html#message.
+        :param reindexing: If the client is reindexing using the on_message event.
         """
 
-        if not self.is_ready() or not message.content or message.author.id == self.user.id:
+        if not self.is_ready() or not message.content or message.author.bot:
             return
 
         prefix = self.get_prefix(message.guild.id)
-        if len(str(message.content)) >= len(prefix) and prefix == str(message.content[0:len(prefix)]):
-            cmd = str(message.content).strip(prefix).split()[0]
+        if len(str(message.content)) >= len(prefix) and prefix == str(message.content)[0:len(prefix)]:
+            cmd = str(message.content).strip(prefix).split()[0].lower()
             try:
                 await commands[cmd](self, message=message)
             except KeyError:
@@ -273,28 +273,31 @@ class DisquidClient(discord.Client):
             game = self.active_games[message.channel.id]
             cache = game.cache
             if not message.author.id == game.players[cache.current_player - 1].uid:
-                await message.channel.send('Not your turn!')
+                if not reindexing:
+                    await message.channel.send('Not your turn!')
                 return
             try:
                 move = Utility.read_move(game.cache.current_player, message.content)
                 cache.receive(move)
-                await message.channel.send('Move Success!')
+                if not reindexing:
+                    await message.channel.send('Move Success!')
                 # Test for win condition
                 if cache.move.move_type == 'Q':
                     await self.on_win(game)
-                await self.update_board(game)
+                if not reindexing:
+                    await self.update_board(game)
                 cache.current_player = 3 - cache.current_player
                 cache.move = None
-                await message.channel.send(f'It is now <@{game.players[game.cache.current_player - 1].uid}>\'s turn.')
             except InvalidMove:
                 move_prefix = message.content.split()[0]
-                if move_prefix == 'V':
+                if move_prefix == 'V' and not reindexing:
                     vanquish_spots: str = Utility.format_locations(cache.latest.vanquish_spots(cache.current_player),
                                                                    game)
                     await message.channel.send('Vanquish options:\n' + vanquish_spots)
                 else:
-                    await message.channel.send(
-                        f'Not a valid move! Use \'{prefix}help moves\' to get help.')
+                    if not reindexing:
+                        await message.channel.send(
+                            f'Not a valid move! Use \'{prefix}help moves\' to get help.')
 
     @command(['help', 'h'])
     async def help_command(self, message: discord.Message):
@@ -364,6 +367,7 @@ class DisquidClient(discord.Client):
             prof_id = self.search_name(processed_message[0])
         elif len(mentions) == 0 and len(processed_message) == 0:
             prof_id = message.author.id
+            self.get_player(prof_id)
         else:
             await message.channel.send('Too many players mentioned/named')
             return
@@ -716,11 +720,20 @@ class DisquidClient(discord.Client):
     @command(['reindex'])
     async def reindex_game(self, message: discord.Message):
         """
-        [@mention (p1), @mention (p2)] rebuilds the current game channel if something is broken by reading all of the
+        [@mention (p1), @mention (p2), bool (replay)] rebuilds the current game channel if something is broken by reading all of the
         valid moves in the channel and building a board from it.
         """
         channel_id = message.channel.id
         prefix = self.get_prefix(message.guild.id)
+        processed_message = str(message.content).split()
+        del processed_message[0]
+        if len(processed_message) == 3:
+            if processed_message[2].lower() == 'true':
+                replay = True
+            else:
+                replay = False
+        else:
+            replay = False
         if message.mentions and len(message.mentions) == 2:
             await self.delete_game(message)
             self.active_games[message.channel.id] = Game(channel_id, [self.get_player(message.mentions[0].id),
@@ -733,27 +746,13 @@ class DisquidClient(discord.Client):
             await message.channel.send(
                 'Invalid arguments, please mention both players in order for the command to be successful.')
             return
-        messages = await message.channel.history(limit=None, oldest_first=True).flatten()
-
-        def redex_chk():
-            possible_strs = [f'{prefix}reindex', f'{prefix}rebuild_game']
-            for s in possible_strs:
-                if s == possible_strs[slice(len(s))]:
-                    return True
-            return False
-
-        del_mode = False
-        for msg in messages:
-            if self.get_prefix(msg.guild.id) not in str(msg.content):
-                if del_mode:
-                    pass
-                    print('I deleted')
-                    # await msg.delete()
-                else:
-                    await self.on_message(msg)
-                    await msg.delete()
-            elif redex_chk():
-                del_mode = True
+        await message.channel.send('Beginning of reindexed game.')
+        async for msg in message.channel.history(limit=None, oldest_first=True):
+            if prefix != str(msg.content)[:len(prefix)]:
+                if not msg.author.bot and replay:
+                    await msg.channel.send(f'{msg.author.name}: {msg.content}')
+                await self.on_message(msg, not replay)
+        await message.channel.send('Reindex complete.')
 
     @command(['save'], True)
     async def save(self, message: discord.Message = None, bypass: bool = False):
@@ -820,15 +819,16 @@ class DisquidClient(discord.Client):
                     chars = 0
                 updated_board_string += row_substring + '\n'
             updated_board_string += '#msg'
-
         for final_substring in updated_board_string.split('#msg'):
             if not final_substring == '':
                 await channel.send(final_substring)
+        await channel.send(
+            f'It is now <@{game.players[game.cache.current_player - 1].uid}>\'s turn.')
 
     async def on_win(self, game):
         channel = self.get_channel(game.channel_id)
         await channel.send(f'<@{game.players[game.cache.current_player - 1].uid}> WINS!')
-        self.active_games.remove(game)
+        self.active_games.pop(channel.id)
         self.game_history.append(game)
 
         async def channel_del(chl):
@@ -836,6 +836,7 @@ class DisquidClient(discord.Client):
             await asyncio.sleep(3600)
             await chl.delete(reason='Game Complete')
 
+        await channel.send(str(game))
         asyncio.run_coroutine_threadsafe(channel_del(channel), asyncio.get_event_loop())
 
 
