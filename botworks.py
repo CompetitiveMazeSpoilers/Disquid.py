@@ -797,7 +797,7 @@ class DisquidClient(discord.Client):
         """
         [@mention] Called by a bot admin to promote a new bot admin.
         """
-        if message.author.id not in DisquidClient.admins:
+        if message.author.id in DisquidClient.admins:
             mentions = message.mentions
             if len(mentions) == 0:
                 await message.channel.send('No argument provided!')
@@ -813,7 +813,7 @@ class DisquidClient(discord.Client):
         [@mention] Called by a bot admin to promote a new bot admin.
         """
         mentions = message.mentions
-        if message.author.id not in DisquidClient.admins:
+        if message.author.id in DisquidClient.admins:
             if len(mentions) == 0:
                 await message.channel.send('No argument provided!')
             for mention in mentions:
