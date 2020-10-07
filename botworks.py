@@ -379,7 +379,10 @@ class DisquidClient(discord.Client):
         embed_var = discord.Embed(title=f'{player.name}\'s profile.', color=0xc0365e)
         primary_emoji = str(player.emoji[0]).strip('[').strip(']')
         secondary_emoji = str(player.emoji[1]).strip('[').strip(']')
-        custom_emoji = str(player.custom_emoji).strip('[').strip(']')
+        custom_emoji_strings = [[]]
+        for c_emoji in player.custom_emoji:
+            custom_emoji_strings.append(str(c_emoji))
+        custom_emoji = str(custom_emoji_strings).strip('[').strip(']')
         emoji_str = f'Primary Emojis (tile, base):\n{primary_emoji}\n\nSecondary Emojis (tile, base):' \
                     f'\n{secondary_emoji}\n\nCustom Emojis\n{custom_emoji}'
         embed_var.add_field(name='Emojis', value=emoji_str, inline=False)
@@ -575,7 +578,7 @@ class DisquidClient(discord.Client):
                 'blue': ':blue_square:',
                 'purple': ':purple_square:',
                 'white': ':white_large_square:',
-                'custom': str(self.get_player(message.author.id).custom_emoji[tile_type])
+                'custom': str(self.get_player(message.author.id).custom_emoji[tile_type-1])
             }
             emoji_name = emoji_opts[tile_name]
 
@@ -586,11 +589,14 @@ class DisquidClient(discord.Client):
                     if emoji_owner.emoji[i][j] == str(emoji_name):
                         emoji_name = 'duplicate'
 
-            if tile_favor and tile_type and emoji_name:
+            if emoji_name == 'duplicate':
+                await message.channel.send('Emoji already chosen by player')
+            elif emoji_name == 'empty':
+                await message.channel.send('Custom emoji slot has not been filled')
+            elif tile_favor and tile_type and emoji_name:
                 emoji_owner.emoji[tile_favor - 1][tile_type - 1] = str(emoji_name)
                 await message.channel.send(f'Success! {emoji_name} has been set')
-            elif emoji_name == 'duplicate':
-                await message.channel.send('Emoji already chosen by player')
+
             else:
                 await message.channel.send('Arguments invalid. Check help command')
 
@@ -604,10 +610,10 @@ class DisquidClient(discord.Client):
         attachments = message.attachments
         slot = None
         if len(processed_message) == 0 or processed_message[0] == 'tile':
-            slot_empty = self.get_player(message.author.id).custom_emoji[0] == ''
+            slot_empty = self.get_player(message.author.id).custom_emoji[0] == 'empty'
             slot = 'tile'
-        elif processed_message[1] == 'base':
-            slot_empty = self.get_player(message.author.id).custom_emoji[1] == ''
+        elif processed_message[0] == 'base':
+            slot_empty = self.get_player(message.author.id).custom_emoji[1] == 'empty'
             slot = 'base'
 
         if len(attachments) == 0:
@@ -653,7 +659,7 @@ class DisquidClient(discord.Client):
             await message.channel.send(f'Invalid Argument: \'{processed_message[0]}\'')
             return
 
-        if emoji_owner.custom_emoji[emoji_index] == '':
+        if emoji_owner.custom_emoji[emoji_index] == 'empty':
             await message.channel.send('No emoji to delete')
         else:
             c_emoji = emoji_owner.custom_emoji[emoji_index]
@@ -665,7 +671,7 @@ class DisquidClient(discord.Client):
             # remove emoji from storage server
             await c_emoji.delete()
             # remove emoji from player's custom list
-            emoji_owner.custom_emoji[emoji_index] = ''
+            emoji_owner.custom_emoji[emoji_index] = 'empty'
             await message.channel.send(f'{emoji_owner.name} custom {tile_type} slot has been deleted')
 
     @command(['changename', 'name'])
@@ -692,11 +698,11 @@ class DisquidClient(discord.Client):
                 return
         self.get_player(uid).name = str(processed_message[0])
         for i in range(len(self.get_player(uid).custom_emoji)):
-            if '' not in self.get_player(uid).custom_emoji[i]:
+            if 'empty' not in self.get_player(uid).custom_emoji[i]:
                 if i == 0:
-                    self.get_player(uid).custom_emoji[0].edit(str(processed_message[0] + '_b'))
+                    await self.get_player(uid).custom_emoji[0].edit(name=str(processed_message[0]) + '_b')
                 if i == 1:
-                    self.get_player(uid).custom_emoji[1].edit(str(processed_message[0]))
+                    await self.get_player(uid).custom_emoji[1].edit(name=str(processed_message[0]))
         await message.channel.send('Name changed successfully!')
 
     @command(['delgame', 'del'])
