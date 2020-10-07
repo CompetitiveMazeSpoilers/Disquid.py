@@ -726,11 +726,13 @@ class DisquidClient(discord.Client):
             self.active_games[message.channel.id] = Game(channel_id, [self.get_player(message.mentions[0].id),
                                                                       self.get_player(message.mentions[1].id)])
         elif len(message.mentions) == 1 and message.mentions[0].id == message.author.id:
+            await self.delete_game(message)
             self.active_games[message.channel.id] = Game(channel_id, [self.get_player(message.mentions[0].id),
                                                                       self.get_player(message.mentions[0].id)])
         else:
             await message.channel.send(
                 'Invalid arguments, please mention both players in order for the command to be successful.')
+            return
         messages = await message.channel.history(limit=None, oldest_first=True).flatten()
 
         def redex_chk():
@@ -748,8 +750,8 @@ class DisquidClient(discord.Client):
                     print('I deleted')
                     # await msg.delete()
                 else:
-                    # await msg.delete()
                     await self.on_message(msg)
+                    await msg.delete()
             elif redex_chk():
                 del_mode = True
 
@@ -773,7 +775,6 @@ class DisquidClient(discord.Client):
         if message.author.id in DisquidClient.admins:
             await message.channel.send('Shutting down.')
             await self.logout()
-            sys.exit()
         else:
             await message.channel.send('Insufficient User Permissions')
 
