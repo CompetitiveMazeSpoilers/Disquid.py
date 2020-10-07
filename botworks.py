@@ -791,15 +791,17 @@ class DisquidClient(discord.Client):
         updated_board_string = ''
         for substring in str(game).split('#msg'):
             chars = 0
-            for row_substring in substring:
+            for row_substring in substring.split('\n'):
                 chars += len(row_substring)
                 if chars > 2000:
                     updated_board_string += '#msg'
                     chars = 0
-                updated_board_string += row_substring
+                updated_board_string += row_substring + '\n'
+            updated_board_string += '#msg'
 
-        for substring in updated_board_string.split('#msg'):
-            await channel.send(substring)
+        for final_substring in updated_board_string.split('#msg'):
+            if not final_substring == '':
+                await channel.send(final_substring)
 
     async def on_win(self, game):
         channel = self.get_channel(game.channel_id)
