@@ -79,7 +79,22 @@ class Game(object):
         for i, player in enumerate(self.players):
             board_string = board_string.replace(f'p{i + 1}b', player.emoji[i][1])
             board_string = board_string.replace(f'p{i + 1}', player.emoji[i][0])
-        return board_string
+        # add message breaks to prevent passing character limit
+        updated_board_string = ''
+        for substring in board_string.split('#msg'):
+            chars = 0
+            for row_substring in substring.split('\n'):
+                chars += len(row_substring)
+                if chars > 2000:
+                    updated_board_string += '#msg'
+                    chars = 0
+                updated_board_string += row_substring + '\n'
+            updated_board_string += '#msg'
+        updated_board_string = updated_board_string.replace('#msg\n#msg', '#msg')
+        updated_board_string = updated_board_string.replace('#msg#msg', '#msg')
+        if updated_board_string[-4:] == '#msg':
+            updated_board_string = updated_board_string[:-4]
+        return updated_board_string
 
     def get_board_string(self, board: Board):
         board_string = str(board)

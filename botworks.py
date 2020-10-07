@@ -831,20 +831,8 @@ class DisquidClient(discord.Client):
     async def update_board(self, game):
         channel = self.get_channel(game.channel_id)
         await channel.send('Incoming Board!')
-        # add message breaks to prevent passing character limit
-        updated_board_string = ''
-        for substring in str(game).split('#msg'):
-            chars = 0
-            for row_substring in substring.split('\n'):
-                chars += len(row_substring)
-                if chars > 2000:
-                    updated_board_string += '#msg'
-                    chars = 0
-                updated_board_string += row_substring + '\n'
-            updated_board_string += '#msg'
-        for final_substring in updated_board_string.split('#msg'):
-            if not final_substring == '':
-                await channel.send(final_substring)
+        for final_substring in str(game).split('#msg'):
+            await channel.send(final_substring)
         await channel.send(
             f'It is now <@{game.players[game.cache.current_player - 1].uid}>\'s turn.')
 
