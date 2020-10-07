@@ -73,7 +73,7 @@ class DisquidClient(discord.Client):
     Documentation Quick Reference https://discordpy.readthedocs.io/en/latest/api.html#
     """
 
-    default_prefix = '*'
+    default_prefix = '%'
     data_path = Path('data/')
     auto_save_duration = 300  # in seconds
     admins: []
@@ -547,18 +547,18 @@ class DisquidClient(discord.Client):
             await message.channel.send('Missing arguments')
         else:
             if processed_message[0] == 'main':
-                tile_favor = 0
-            elif processed_message[0] == 'alt':
                 tile_favor = 1
+            elif processed_message[0] == 'alt':
+                tile_favor = 2
             else:
-                tile_favor = None
+                tile_favor = 0
 
             if processed_message[1] == 'tile':
-                tile_type = 0
-            elif processed_message[1] == 'base':
                 tile_type = 1
+            elif processed_message[1] == 'base':
+                tile_type = 2
             else:
-                tile_type = None
+                tile_type = 0
 
             tile_name = processed_message[2]
             emoji_opts = {
@@ -583,7 +583,7 @@ class DisquidClient(discord.Client):
                         emoji_name = 'duplicate'
 
             if tile_favor and tile_type and emoji_name:
-                emoji_owner.emoji[tile_favor][tile_type] = str(emoji_name)
+                emoji_owner.emoji[tile_favor-1][tile_type-1] = str(emoji_name)
                 await message.channel.send(f'Success! {emoji_name} has been set')
             elif emoji_name == 'duplicate':
                 await message.channel.send('Emoji already chosen by player')
@@ -804,8 +804,21 @@ class DisquidClient(discord.Client):
     async def update_board(self, game):
         channel = self.get_channel(game.channel_id)
         await channel.send('Incoming Board!')
+        # add message breaks to prevent passing character limit
+        updated_board_string = ''
         for substring in str(game).split('#msg'):
-            await channel.send(substring)
+            chars = 0
+            for row_substring in substring.split('\n'):
+                chars += len(row_substring)
+                if chars > 2000:
+                    updated_board_string += '#msg'
+                    chars = 0
+                updated_board_string += row_substring + '\n'
+            updated_board_string += '#msg'
+
+        for final_substring in updated_board_string.split('#msg'):
+            if not final_substring == '':
+                await channel.send(final_substring)
 
     async def on_win(self, game):
         channel = self.get_channel(game.channel_id)
