@@ -266,11 +266,25 @@ class DisquidClient(discord.Client):
             except KeyError:
                 print('User tried nonexistent command')
         else:
-            if message.channel.id not in self.active_games or not str(message.content)[0] in ['A', 'C', 'V', 'Q'] \
+            if message.channel.id not in self.active_games:
+                return
+            game = self.active_games[message.channel.id]
+            if str(message.content) == 'draw' or str(message.content) == 'cancel':
+                if str(message.content) == 'draw' and message.author.id in game.players:
+                    if not str(game.draw_suggested):
+                        await message.channel.send('Are you sure? The other player can confirm by typing \'draw\' or '
+                                                   'either of you can cancel by typing \'cancel\'')
+                        game.draw_suggested = message.author.id
+                        return
+                    elif not game.draw_suggested == message.author.id:
+                        await self.on_draw(game)
+                else:
+                    game.draw_suggested = 0
+
+            if not str(message.content)[0] in ['A', 'C', 'V', 'Q'] \
                     or len(message.content.split()) > 4:
                 return
             # User is likely attempting a move under these conditions
-            game = self.active_games[message.channel.id]
             cache = game.cache
             if not message.author.id == game.players[cache.current_player - 1].uid:
                 if not reindexing:
@@ -284,6 +298,8 @@ class DisquidClient(discord.Client):
                 # Test for win condition
                 if cache.move.move_type == 'Q':
                     await self.on_win(game)
+                    cache.move = None
+                    return
                 if not reindexing:
                     await self.update_board(game)
                 cache.current_player = 3 - cache.current_player
@@ -338,7 +354,7 @@ class DisquidClient(discord.Client):
         """
         PONG! Sends the bot's latency.
         """
-        await message.channel.send(f'{self.latency*1000}ms')
+        await message.channel.send(f'{self.latency * 1000}ms')
 
     @command(['changeprefix', 'cp'])
     async def change_prefix(self, message: discord.message):
@@ -367,7 +383,7 @@ class DisquidClient(discord.Client):
         processed_message = str(message.content).split()
         del processed_message[0]
         if len(mentions) == 1:
-            prof_id = mentions[0]
+            prof_id = mentions[0].id
         elif len(mentions) == 0 and len(processed_message) == 1:
             if processed_message[0] == 'dft':
                 await message.channel.send('Cannot view the profile by name of someone of the default name.')
@@ -500,8 +516,8 @@ class DisquidClient(discord.Client):
             for substring in board_string.split('#msg'):
                 await message.channel.send(substring)
             await message.channel.send(
-                f'It is <@{target_game.players[target_game.cache.current_player - 1].uid}>\'s turn! Do \'{self.get_prefix(message.guild.id)}'
-                f'help moves\' for move help')
+                f'It is <@{target_game.players[target_game.cache.current_player - 1].uid}>\'s turn! '
+                f'Do \'{self.get_prefix(message.guild.id)}help moves\' for move help')
             return
         await message.channel.send(
             f'No waiting game found, please use {self.get_prefix(message.guild.id)}challenge to make one.')
@@ -720,6 +736,13 @@ class DisquidClient(discord.Client):
             if channel_id in self.active_games:
                 self.active_games.pop(channel_id)
                 await message.channel.send('Game Deleted.')
+
+                async def channel_del(chl):
+                    await message.channel.send('Channel will be deleted in 1hr, and has been moved to game history.')
+                    await asyncio.sleep(3600)
+                    await message.channel.delete(reason='Game Complete')
+
+                asyncio.run_coroutine_threadsafe(channel_del(), asyncio.get_event_loop())
             else:
                 await message.channel.send('No game to delete in this channel.')
         else:
@@ -728,8 +751,8 @@ class DisquidClient(discord.Client):
     @command(['reindex'])
     async def reindex_game(self, message: discord.Message):
         """
-        [@mention (p1), @mention (p2), bool (replay)] rebuilds the current game channel if something is broken by reading all of the
-        valid moves in the channel and building a board from it.
+        [@mention (p1), @mention (p2), bool (replay)] rebuilds the current game channel if something is broken by
+        reading all of the valid moves in the channel and building a board from it.
         """
         if message.author.guild_permissions.administrator:
             channel_id = message.channel.id
@@ -747,7 +770,7 @@ class DisquidClient(discord.Client):
                 await self.delete_game(message)
                 self.active_games[message.channel.id] = Game(channel_id, [self.get_player(message.mentions[0].id),
                                                                           self.get_player(message.mentions[1].id)])
-            elif len(message.mentions) == 1 and message.mentions[0].id == message.author.id:
+            elif len(message.mentions) == 1 and not len(str(message.content).split()) < 3:
                 await self.delete_game(message)
                 self.active_games[message.channel.id] = Game(channel_id, [self.get_player(message.mentions[0].id),
                                                                           self.get_player(message.mentions[0].id)])
@@ -802,8 +825,11 @@ class DisquidClient(discord.Client):
             if len(mentions) == 0:
                 await message.channel.send('No argument provided!')
             for mention in mentions:
-                DisquidClient.admins.append(mention.id)
-                await message.channel.send(f'@<{mention.id}> is now an admin.')
+                if mention.id not in DisquidClient.admins:
+                    DisquidClient.admins.append(mention.id)
+                    await message.channel.send(f'<@{mention.id}> is now an admin.')
+                else:
+                    await message.channel.send(f'<@{mention.id}> was already an admin!')
         else:
             await message.channel.send('Insufficient user permissions.')
 
@@ -822,7 +848,7 @@ class DisquidClient(discord.Client):
         else:
             await message.channel.send('Insufficient user permissions.')
 
-    async def update_board(self, game):
+    async def update_board(self, game, win_move=False):
         channel = self.get_channel(game.channel_id)
         await channel.send('Incoming Board!')
         # add message breaks to prevent passing character limit
@@ -839,8 +865,9 @@ class DisquidClient(discord.Client):
         for final_substring in updated_board_string.split('#msg'):
             if not final_substring == '':
                 await channel.send(final_substring)
-        await channel.send(
-            f'It is now <@{game.players[game.cache.current_player - 1].uid}>\'s turn.')
+        if not win_move:
+            await channel.send(
+                f'It is now <@{game.players[game.cache.current_player - 1].uid}>\'s turn.')
 
     async def on_win(self, game):
         channel = self.get_channel(game.channel_id)
@@ -848,13 +875,27 @@ class DisquidClient(discord.Client):
         self.active_games.pop(channel.id)
         self.game_history.append(game)
 
-        async def channel_del(chl):
-            await chl.send('Channel will be deleted in 1hr, and has been moved to game history.')
+        async def channel_del():
+            await channel.send('Channel will be deleted in 1hr, and has been moved to game history.')
             await asyncio.sleep(3600)
-            await chl.delete(reason='Game Complete')
+            await channel.delete(reason='Game Complete')
 
-        await channel.send(str(game))
-        asyncio.run_coroutine_threadsafe(channel_del(channel), asyncio.get_event_loop())
+        await self.update_board(game, True)
+        # await channel.send(str(game))
+        asyncio.run_coroutine_threadsafe(channel_del(), asyncio.get_event_loop())
+
+    async def on_draw(self, game):
+        channel = self.get_channel(game.channel_id)
+        await channel.send('Game ends in a draw. Shake hands now.')
+        self.active_games.pop(channel.id)
+        self.game_history.append(game)
+
+        async def channel_del():
+            await channel.send('Channel will be deleted in 1hr, and has been moved to game history.')
+            await asyncio.sleep(3600)
+            await channel.delete(reason='Game Complete')
+
+        asyncio.run_coroutine_threadsafe(channel_del(), asyncio.get_event_loop())
 
     async def close(self):
         await self.save(bypass=True)

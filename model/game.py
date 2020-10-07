@@ -70,7 +70,7 @@ class Game(object):
                 raise InvalidGameSetup
         self.history = History(r, c, bases, [])
         self.cache = Cache(self.history)
-        self.being_deleted = 'No'
+        self.draw_suggested = 0
 
     def __str__(self):
         board_string = str(self.cache.latest)
