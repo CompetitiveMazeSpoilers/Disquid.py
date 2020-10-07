@@ -271,8 +271,9 @@ class DisquidClient(discord.Client):
             game = self.active_games[message.channel.id]
             if str(message.content) == 'draw' or str(message.content) == 'cancel':
                 if str(message.content) == 'draw' and message.author.id in game.players:
-                    if not str(game.draw_suggested):
-                        await message.channel.send('Are you sure? The other player can confirm by typing \'draw\' or '
+                    if not game.draw_suggested:
+                        if not reindexing:
+                            await message.channel.send('Are you sure? The other player can confirm by typing \'draw\' or '
                                                    'either of you can cancel by typing \'cancel\'')
                         game.draw_suggested = message.author.id
                         return
@@ -280,6 +281,8 @@ class DisquidClient(discord.Client):
                         await self.on_draw(game)
                 else:
                     game.draw_suggested = 0
+                    if not reindexing:
+                        await message.channel.send('Draw canceled.')
 
             if not str(message.content)[0] in ['A', 'C', 'V', 'Q'] \
                     or len(message.content.split()) > 4:
@@ -339,13 +342,15 @@ class DisquidClient(discord.Client):
             if processed_message[0] == 'moves':
                 await message.channel.send(
                     'A -- Acquire, this move claims 3 cells given as arguments with flag codes (eg. :flag_us: -> '
-                    'us).\n'
+                    'us) flags that do not have a horizontal line require an arrow indicating what side of the board '
+                    'they are on (eg. :flag_eu: -> <eu).\n'
                     'V -- Vanquish, this move is used to clear a 4x4 area of an enemy cells as long as 4 of the '
                     'attempting player\'s own cells touch the region.\n'
                     'C -- Conquer, this move claims all enemy cells that touch 2 of the attempting player\'s '
                     'cells.\n'
                     'Q -- Conquest, this move is required to win the game, used when the attempting player'
-                    'believes they have a path to the enemy base.')
+                    'believes they have a path to the enemy base.\n'
+                    'Draw-- Ends the game without a winner if each individual participating agrees.')
             else:
                 await message.channel.send(f'No help found for \'{processed_message[0]}\'.')
 
