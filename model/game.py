@@ -1,3 +1,5 @@
+import copy
+
 from model.memory import *
 import discord
 
@@ -20,8 +22,8 @@ class Player(object):
     def __init__(self, uid: int, rank: int, emoji: EmojiArray = default_emoji, name: str = 'dft'):
         self.uid = uid
         self.rank = rank
-        self.emoji = emoji
-        self.custom_emoji = ['', '']
+        self.emoji = copy.deepcopy(emoji)
+        self.custom_emoji = ['empty', 'empty']
         self.name = name
 
     def __eq__(self, other):
