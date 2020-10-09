@@ -307,6 +307,9 @@ class DisquidClient(discord.Client):
                     await self.update_board(game)
                 cache.current_player = 3 - cache.current_player
                 cache.move = None
+                if not reindexing:
+                    await message.channel.send(
+                        f'It is now <@{game.players[game.cache.current_player - 1].uid}>\'s turn.')
             except InvalidMove:
                 move_prefix = message.content.split()[0]
                 if move_prefix == 'V' and not reindexing:
@@ -568,7 +571,7 @@ class DisquidClient(discord.Client):
         """
         if message.channel.id in self.active_games and message.author.id in self.active_games[
             message.channel.id].players:
-            await self.update_board(self.active_games[message.channel.id])
+            await self.update_board(self.active_games[message.channel.id], True)
         else:
             await message.channel.send('No board to update here.')
 
@@ -859,14 +862,15 @@ class DisquidClient(discord.Client):
         else:
             await message.channel.send('Insufficient user permissions.')
 
-    async def update_board(self, game, win_move=False):
+    async def update_board(self, game: Game, turn_incicator = False):
         channel = self.get_channel(game.channel_id)
         await channel.send('Incoming Board!')
         for final_substring in str(game).split('#msg'):
             await channel.send(final_substring)
-        if not win_move:
+        if turn_incicator:
             await channel.send(
                 f'It is now <@{game.players[game.cache.current_player - 1].uid}>\'s turn.')
+
 
     async def on_win(self, game):
         channel = self.get_channel(game.channel_id)
@@ -879,7 +883,7 @@ class DisquidClient(discord.Client):
             await asyncio.sleep(3600)
             await channel.delete(reason='Game Complete')
 
-        await self.update_board(game, True)
+        await self.update_board(game)
         asyncio.run_coroutine_threadsafe(channel_del(), asyncio.get_event_loop())
 
     async def on_draw(self, game):
