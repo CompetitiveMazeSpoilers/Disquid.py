@@ -325,7 +325,7 @@ class DisquidClient(discord.Client):
     @command(['help', 'h'])
     async def help_command(self, message: discord.Message):
         """
-        [*, moves] Provides descriptions of commands.
+        [*, moves, tiles] Provides descriptions of commands.
         """
         is_admin = message.author.id in DisquidClient.admins
         processed_message = str(message.content).split()
