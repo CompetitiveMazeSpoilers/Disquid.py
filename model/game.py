@@ -76,9 +76,26 @@ class Game(object):
 
     def __str__(self):
         board_string = str(self.cache.latest)
+        used_emojis = []
         for i, player in enumerate(self.players):
-            board_string = board_string.replace(f'p{i + 1}b', player.emoji[i][1])
-            board_string = board_string.replace(f'p{i + 1}', player.emoji[i][0])
+            # use highest priority emoji not used by another player
+            base_emoji = player.emoji[0][1]
+            tile_emoji = player.emoji[0][0]
+
+            priority_count = 0
+            while base_emoji in used_emojis and priority_count < len(player.emoji):
+                priority_count += 1
+                base_emoji = player.emoji[priority_count][1]
+            used_emojis.append(base_emoji)
+
+            priority_count = 0
+            while tile_emoji in used_emojis and priority_count < len(player.emoji):
+                priority_count += 1
+                tile_emoji = player.emoji[priority_count][0]
+            used_emojis.append(tile_emoji)
+
+            board_string = board_string.replace(f'p{i + 1}b', base_emoji)
+            board_string = board_string.replace(f'p{i + 1}', tile_emoji)
         # add message breaks to prevent passing character limit
         updated_board_string = ''
         for substring in board_string.split('#msg'):
