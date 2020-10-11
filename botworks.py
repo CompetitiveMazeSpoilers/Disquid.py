@@ -77,6 +77,7 @@ class DisquidClient(discord.Client):
     auto_save_duration = 300  # in seconds
     admins: []
     debug_guild = 762071050007609344
+    colors_guild = 764673692650831893
 
     def __init__(self, prefix_file_name: str = 'prefixes', admin_file_name: str = 'admins',
                  player_file_name: str = 'players',
@@ -354,6 +355,31 @@ class DisquidClient(discord.Client):
                     'Q -- Conquest, this move is required to win the game, used when the attempting player'
                     'believes they have a path to the enemy base.\n'
                     'Draw-- Ends the game without a winner if each individual participating agrees.')
+            elif processed_message[0] == 'tiles':
+                emoji_opts = {
+                    'black': ':black_large_square:',
+                    'brown': ':brown_square:',
+                    'red': ':red_square:',
+                    'orange': ':orange_square:',
+                    'yellow': ':yellow_square:',
+                    'green': ':green_square:',
+                    'blue': ':blue_square:',
+                    'purple': ':purple_square:',
+                    'white': ':white_large_square:',
+                }
+                # add custom colors
+                c_guild = self.get_guild(self.colors_guild)
+                color_emojis = c_guild.emojis
+                for c_emoji in color_emojis:
+                    emoji_opts[c_emoji.name] = str(c_emoji)
+                emoji_opts['custom'] = '[based on player custom slots]'
+
+                # loop through all options and add
+                help_msg = ''
+                for opt in emoji_opts.items():
+                    help_msg += f'{opt[1]} : `{opt[0]}`\n'
+
+                await message.channel.send(help_msg)
             else:
                 await message.channel.send(f'No help found for \'{processed_message[0]}\'.')
 
@@ -612,6 +638,12 @@ class DisquidClient(discord.Client):
                 'white': ':white_large_square:',
                 'custom': str(self.get_player(message.author.id).custom_emoji[tile_type-1])
             }
+            # add custom colors
+            c_guild = self.get_guild(self.colors_guild)
+            color_emojis = c_guild.emojis
+            for c_emoji in color_emojis:
+                emoji_opts[c_emoji.name] = str(c_emoji)
+
             emoji_name = emoji_opts[tile_name]
 
             # check if duplicate
