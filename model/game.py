@@ -23,12 +23,12 @@ class Player(object):
         0: 'Delinquent',
         100: 'Quartermaster',
         200: 'Squire',
-        300: 'Conquistador',
+        300: 'Marquee',
+        400: 'Conquistador'
     }
 
-    def __init__(self, uid: int, rank: int, elo: int = 0, emoji: EmojiArray = default_emoji, name: str = 'dft'):
+    def __init__(self, uid: int, elo: int = 0, emoji: EmojiArray = default_emoji, name: str = 'dft'):
         self.uid = uid
-        self.rank = rank
         self.elo = elo
         self.emoji = copy.deepcopy(emoji)
         self.custom_emoji = ['empty', 'empty']
@@ -190,7 +190,7 @@ class Utility:
         del args[0]
 
         # acquire
-        if prefix == 'A':
+        if prefix == 'A' and len(args) == 3:
             locs = []
             for flag_code in args:
                 loc = Utility.translate_flag(flag_code)

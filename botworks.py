@@ -193,6 +193,7 @@ class DisquidClient(discord.Client):
             return self.players[uid]
         except KeyError:  # in case of failure of the on_guild_join event
             self.players[uid] = Player(uid, len(self.players) + 1)
+            self.ranks.append(self.get_player(uid))
             return self.get_player(uid)
 
     def search_name(self, name: str) -> int:
@@ -255,7 +256,7 @@ class DisquidClient(discord.Client):
         Put any startup actions here.
         """
         print(f'Disquid {__version__} ready.')
-        await self.get_channel(764699769829982218).send(f'Disquid {__version__} ready to test.')  # Test channel
+        await self.get_channel(764699769829982218).send(f'Disquid {__version__} is now online and ready.')
 
     async def on_guild_join(self, guild: discord.Guild):
         """
@@ -453,17 +454,16 @@ class DisquidClient(discord.Client):
 
         player = self.players[prof_id]
         embed_var = discord.Embed(title=f'{player.name}\'s profile.', color=0xc0365e)
-        primary_emoji = str(player.emoji[0]).strip('[').strip(']')
-        secondary_emoji = str(player.emoji[1]).strip('[').strip(']')
         custom_emoji_strings = [[]]
         for c_emoji in player.custom_emoji:
             custom_emoji_strings.append(str(c_emoji))
-        custom_emoji = str(custom_emoji_strings).strip('[').strip(']')
-        emoji_str = f'Primary Emojis (tile, base):\n{primary_emoji}\n\nSecondary Emojis (tile, base):' \
-                    f'\n{secondary_emoji}\n\nCustom Emojis\n{custom_emoji}'
+        emoji_str = f'Primary Emojis (tile, base)\n{str(player.emoji[0]).strip("[").strip("]")}'\
+                    f'\n\nSecondary Emojis (tile, base)\n{str(player.emoji[1]).strip("[").strip("]")}'\
+                    f'\n\nCustom Emojis\n{str(custom_emoji_strings).strip("[").strip("]").strip(",")}'
         embed_var.add_field(name='Emojis', value=emoji_str, inline=False)
-        embed_var.add_field(name='Rank', value=f'#{player.rank}/{len(self.players)} Worldwide', inline=False)
-        embed_var.add_field(name='Elo', value=f'{player.elo}: {player.elo_string()}')
+        embed_var.add_field(name='Rank', value=f'#{self.ranks.index(player)}/{len(self.players)} Worldwide', inline=False)
+        embed_var.add_field(name='Elo', value=f'{player.elo}: '
+                                              f'{player.elo_string() if self.ranks.index(player) != 0 else "Queen"}')
         await message.channel.send(embed=embed_var)
 
     @command(['top'])
@@ -941,28 +941,26 @@ class DisquidClient(discord.Client):
         self.active_games.pop(channel.id)
         if game.channel_id not in self.game_history:
             self.game_history.append(game)
+            await self.update_board(game)
+            winner.calc_elo(loser, True)
+            loser.calc_elo(winner, False)
+            index = self.ranks.index(winner)
+            while index != 0 and winner.elo > self.ranks[index - 1].elo:
+                index -= 1
+            self.ranks.remove(winner)
+            self.ranks.insert(index, winner)
+            index = self.ranks.index(loser)
+            while index != len(self.ranks)-1 and loser.elo < self.ranks[index + 1].elo:
+                index += 1
+            self.ranks.remove(loser)
+            self.ranks.insert(index, loser)
 
         async def channel_del():
             await channel.send('Channel will be deleted in 1hr, and has been moved to game history.')
             await asyncio.sleep(3600)
             await channel.delete(reason='Game Complete')
 
-        await self.update_board(game)
-        winner.calc_elo(loser, True)
-        loser.calc_elo(winner, False)
         asyncio.run_coroutine_threadsafe(channel_del(), asyncio.get_event_loop())
-        index = self.ranks.index(winner)
-        while index != 0 and winner.elo > self.ranks[index - 1].elo:
-            index -= 1
-        self.ranks.remove(winner)
-        self.ranks.insert(index, winner)
-        index = self.ranks.index(loser)
-        while index != len(self.ranks) and loser.elo < self.ranks[index + 1].elo:
-            index += 1
-        self.ranks.remove(loser)
-        self.ranks.insert(index, loser)
-        loser.rank = self.ranks.index(loser) + 1
-        winner.rank = self.ranks.index(winner) + 1
 
     async def on_draw(self, game):
         channel = self.get_channel(game.channel_id)
