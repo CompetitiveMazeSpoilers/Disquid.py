@@ -3,7 +3,7 @@ import pickle
 
 from model.game import *
 
-__version__ = 'v0.2beta'
+__version__ = 'v1.0'
 
 """
 AUTHORS:
@@ -148,6 +148,8 @@ class DisquidClient(discord.Client):
             with open(self.history_file, 'rb') as f:
                 self.game_history: [Game] = pickle.load(f)
 
+        self.ranks = self.rank_arr(self.players)
+
         # Adding auto save
         async def auto_save(duration: int):
             while True:
@@ -155,6 +157,20 @@ class DisquidClient(discord.Client):
                 await self.save(bypass=True)
 
         asyncio.run_coroutine_threadsafe(auto_save(DisquidClient.auto_save_duration), asyncio.get_event_loop())
+
+    def rank_arr(self, d: {}):
+        """
+        :return: an array in order of ELO of the players
+        """
+        arr = []
+        for key in d:
+            arr.append(d[key])
+
+        def val(p):
+            return p.elo
+
+        arr.sort(key=val)
+        return arr
 
     def get_prefix(self, gid: discord.Guild.id):
         """
@@ -238,7 +254,7 @@ class DisquidClient(discord.Client):
         Put any startup actions here.
         """
         print(f'Disquid {__version__} ready.')
-        await self.get_channel(762071050522984470).send(f'Disquid {__version__} ready to test.')  # Test channel
+        await self.get_channel(764699769829982218).send(f'Disquid {__version__} ready to test.')  # Test channel
 
     async def on_guild_join(self, guild: discord.Guild):
         """
@@ -273,8 +289,9 @@ class DisquidClient(discord.Client):
                 if str(message.content) == 'draw' and message.author.id in game.players:
                     if not game.draw_suggested:
                         if not reindexing:
-                            await message.channel.send('Are you sure? The other player can confirm by typing \'draw\' or '
-                                                   'either of you can cancel by typing \'cancel\'')
+                            await message.channel.send(
+                                'Are you sure? The other player can confirm by typing \'draw\' or '
+                                'either of you can cancel by typing \'cancel\'')
                         game.draw_suggested = message.author.id
                         return
                     elif not game.draw_suggested == message.author.id:
@@ -339,7 +356,8 @@ class DisquidClient(discord.Client):
                         aliases.append(k) if commands[key] == commands[k] else aliases
                     if str(aliases) not in active_descs:
                         active_descs[str(aliases)] = commands[key].__doc__
-                        embed_var.add_field(name=str(aliases), value=str(commands[key].__doc__), inline=False)
+                        embed_var.add_field(name=str(aliases), value=str(commands[key].__doc__).replace('\n', ''),
+                                            inline=False)
             await message.channel.send(embed=embed_var)
         else:
             if processed_message[0] == 'moves':
@@ -419,7 +437,19 @@ class DisquidClient(discord.Client):
                     f'\n{secondary_emoji}\n\nCustom Emojis\n{custom_emoji}'
         embed_var.add_field(name='Emojis', value=emoji_str, inline=False)
         embed_var.add_field(name='Rank', value=f'#{player.rank}/{len(self.players)} Worldwide', inline=False)
+        embed_var.add_field(name='Elo', value=f'{player.elo}: {player.elo_string()}')
         await message.channel.send(embed=embed_var)
+
+    @command(['top'])
+    async def leaderboard(self, message: discord.Message):
+        embed_var = discord.Embed(title='Worldwide Leaderboard', color=0xc0365e)
+        leaderboard_str = ''
+        for i, player in enumerate(self.ranks):
+            if i >= 10:
+                break
+            leaderboard_str += f'`[{i + 1}]`: {player.name}\n'
+        embed_var.add_field(name='Top 10', value=leaderboard_str, inline=False)
+        message.channel.send(embed=embed_var)
 
     @command(['c'])
     async def challenge(self, message: discord.Message):
@@ -610,7 +640,7 @@ class DisquidClient(discord.Client):
                 'blue': ':blue_square:',
                 'purple': ':purple_square:',
                 'white': ':white_large_square:',
-                'custom': str(self.get_player(message.author.id).custom_emoji[tile_type-1])
+                'custom': str(self.get_player(message.author.id).custom_emoji[tile_type - 1])
             }
             emoji_name = emoji_opts[tile_name]
 
@@ -862,7 +892,7 @@ class DisquidClient(discord.Client):
         else:
             await message.channel.send('Insufficient user permissions.')
 
-    async def update_board(self, game: Game, turn_incicator = False):
+    async def update_board(self, game: Game, turn_incicator=False):
         channel = self.get_channel(game.channel_id)
         await channel.send('Incoming Board!')
         for final_substring in str(game).split('#msg'):
@@ -871,10 +901,11 @@ class DisquidClient(discord.Client):
             await channel.send(
                 f'It is now <@{game.players[game.cache.current_player - 1].uid}>\'s turn.')
 
-
     async def on_win(self, game):
         channel = self.get_channel(game.channel_id)
-        await channel.send(f'<@{game.players[game.cache.current_player - 1].uid}> WINS!')
+        winner = game.players[game.cache.current_player - 1]
+        loser = game.players[(3 - game.cache.current_player) - 1]
+        await channel.send(f'<@{winner.uid}> WINS!')
         self.active_games.pop(channel.id)
         if game.channel_id not in self.game_history:
             self.game_history.append(game)
@@ -885,13 +916,28 @@ class DisquidClient(discord.Client):
             await channel.delete(reason='Game Complete')
 
         await self.update_board(game)
+        winner.calc_elo(loser, True)
+        loser.calc_elo(winner, False)
         asyncio.run_coroutine_threadsafe(channel_del(), asyncio.get_event_loop())
+        index = self.ranks.index(winner)
+        while index != 0 and winner.elo > self.ranks[index - 1].elo:
+            index -= 1
+        self.ranks.remove(winner)
+        self.ranks.insert(index, winner)
+        index = self.ranks.index(loser)
+        while index != len(self.ranks) and loser.elo < self.ranks[index + 1].elo:
+            index += 1
+        self.ranks.remove(loser)
+        self.ranks.insert(index, loser)
+        loser.rank = self.ranks.index(loser) + 1
+        winner.rank = self.ranks.index(winner) + 1
 
     async def on_draw(self, game):
         channel = self.get_channel(game.channel_id)
         await channel.send('Game ends in a draw. Shake hands now.')
         self.active_games.pop(channel.id)
-        self.game_history.append(game)
+        if game.channel_id not in self.active_games:
+            self.game_history.append(game)
 
         async def channel_del():
             await channel.send('Channel will be deleted in 1hr, and has been moved to game history.')

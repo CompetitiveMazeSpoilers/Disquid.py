@@ -1,7 +1,8 @@
 import copy
 
-from model.memory import *
 import discord
+
+from model.memory import *
 
 EmojiSet = Tuple[str, str]
 EmojiArray = Tuple[EmojiSet, EmojiSet]
@@ -18,13 +19,34 @@ class Player(object):
     """
 
     default_emoji: EmojiArray = [[':red_square:', ':red_circle:'], [':blue_square:', ':blue_circle:']]
+    rank_names: {int, str} = {
+        0: 'Delinquent',
+        100: 'Quartermaster',
+        200: 'Squire',
+        300: 'Conquistador',
+    }
 
-    def __init__(self, uid: int, rank: int, emoji: EmojiArray = default_emoji, name: str = 'dft'):
+    def __init__(self, uid: int, rank: int, elo: int = 0, emoji: EmojiArray = default_emoji, name: str = 'dft'):
         self.uid = uid
         self.rank = rank
+        self.elo = elo
         self.emoji = copy.deepcopy(emoji)
         self.custom_emoji = ['empty', 'empty']
         self.name = name
+
+    def calc_elo(self, ply2, win: bool):
+        p1 = (1.0 / (1.0 + pow(10, (ply2.elo - self.elo) / 100)))
+        self.elo += round(30 * (1 - p1 if win else 0 - p1))
+        if self.elo < 0:
+            self.elo = 0
+
+    def elo_string(self):
+        s = ''
+        d = Player.rank_names
+        for num in d:
+            if self.elo >= num:
+                s = d[0]
+        return s
 
     def __eq__(self, other):
         if isinstance(other, Player):
@@ -137,6 +159,7 @@ class Utility:
         Turns a given set of locations into something recognizable
         by the end user on discord.
         """
+
         def emoji_at(i, j) -> str:
             # helper function
             board = game.cache.latest
@@ -150,7 +173,7 @@ class Utility:
 
         result = ''
         for i, (r, c) in enumerate(locs, 1):
-            result += f'`V {r} {c}` : ' + emoji_at(r, c) + f' , rows {r}-{r+4}, cols {c}-{c+4},\n'
+            result += f'`V {r} {c}` : ' + emoji_at(r, c) + f' , rows {r}-{r + 4}, cols {c}-{c + 4},\n'
         return result
 
     @staticmethod
