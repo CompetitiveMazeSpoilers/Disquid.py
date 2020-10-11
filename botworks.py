@@ -876,7 +876,8 @@ class DisquidClient(discord.Client):
         channel = self.get_channel(game.channel_id)
         await channel.send(f'<@{game.players[game.cache.current_player - 1].uid}> WINS!')
         self.active_games.pop(channel.id)
-        self.game_history.append(game)
+        if game.channel_id not in self.game_history:
+            self.game_history.append(game)
 
         async def channel_del():
             await channel.send('Channel will be deleted in 1hr, and has been moved to game history.')
