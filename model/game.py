@@ -1,4 +1,5 @@
 import copy
+import io
 
 import cairo
 import PIL
@@ -314,8 +315,10 @@ class Utility:
         :param asset: Bytes of image to be estimated.
         :return: Color estimation.
         """
-        img = PIL.Image.frombytes('RGB', (22, 22), asset, 'raw')
-        colors = Image.Image.getcolors(img,maxcolors=4096)
+        stream = io.BytesIO(asset)
+        img = PIL.Image.open(stream)
+
+        colors = Image.Image.getcolors(img, maxcolors=256*256*256)
         most_color = colors[0]
         for (count, color) in colors:
             if count > most_color[0]:
