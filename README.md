@@ -63,9 +63,7 @@ Download the zip from the latest version, or use the Git implementation of your 
 
 ## Contribution
 
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
-
-Please be sure to update tests as appropriate and required.
+Please contact the developers to be granted access to contribute directly, feel free to pull and fork at any point.
 
 ## Support
 
