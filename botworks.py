@@ -78,25 +78,32 @@ class DisquidClient(discord.Client):
     admins: []
     debug_guild = 762071050007609344
     colors_guild = 764673692650831893
+    replay_channel = 764879291057700884
 
     def __init__(self, prefix_file_name: str = 'prefixes', admin_file_name: str = 'admins',
-                 player_file_name: str = 'players',
-                 game_file_name: str = 'games', history_file_name: str = 'history', **options):
+                 player_file_name: str = 'players', game_file_name: str = 'games',
+                 history_file_name: str = 'history', video_dir_name: str = 'videos',
+                 rank_file_name: str = 'ranks',
+                 **options):
         super().__init__(**options)
         self.prefix_file = DisquidClient.data_path.joinpath(prefix_file_name + '.json')
         self.admin_file = DisquidClient.data_path.joinpath(admin_file_name + '.json')
         self.player_file = DisquidClient.data_path.joinpath(player_file_name + '.pickle')
         self.game_file = DisquidClient.data_path.joinpath(game_file_name + '.pickle')
         self.history_file = DisquidClient.data_path.joinpath(history_file_name + '.pickle')
+        self.video_dir = DisquidClient.data_path.joinpath(video_dir_name + '/')
+        self.ranks_file = DisquidClient.data_path.joinpath(rank_file_name + '.json')
 
         # Data directory loading
         if not os.path.exists(self.data_path):
             os.mkdir(self.data_path)
 
+        if not os.path.exists(self.video_dir):
+            os.mkdir(self.video_dir)
+
         # Prefix file loading
         if not os.path.exists(self.prefix_file):
             with open(self.prefix_file, 'w') as f:
-                f.truncate(0)
                 json.dump({}, f)
             self.prefixes: {int, str} = {}
         else:
@@ -107,7 +114,6 @@ class DisquidClient(discord.Client):
         # Admin id file loading:
         if not os.path.exists(self.admin_file):
             with open(self.admin_file, 'w') as f:
-                f.truncate(0)
                 temp = [int(input('Please give the first admin\'s userID '))]
                 json.dump(temp, f)
             DisquidClient.admins = temp
@@ -119,7 +125,6 @@ class DisquidClient(discord.Client):
         # Player file loading
         if not os.path.exists(self.player_file):
             with open(self.player_file, 'wb') as f:
-                f.truncate(0)
                 pickle.dump({}, f)
             self.players: {int, Player} = {}
         else:
@@ -132,7 +137,6 @@ class DisquidClient(discord.Client):
         # Active Game file loading
         if not os.path.exists(self.game_file):
             with open(self.game_file, 'wb') as f:
-                f.truncate(0)
                 pickle.dump({}, f)
             self.active_games: {int, Game} = {}
         else:
@@ -142,7 +146,6 @@ class DisquidClient(discord.Client):
         # Active Game file loading
         if not os.path.exists(self.history_file):
             with open(self.history_file, 'wb') as f:
-                f.truncate(0)
                 pickle.dump([], f)
                 self.game_history: [Game] = []
         else:
@@ -170,8 +173,23 @@ class DisquidClient(discord.Client):
         def val(p):
             return p.elo
 
-        arr.sort(key=val)
+        arr.sort(key=val, reverse=True)
         return arr
+
+    async def regen_videos(self):
+        """
+        Clears video dir and regenerates all of the videos.
+        """
+        for game in self.game_history:
+            game.to_video(self.data_path.joinpath('temp/'), self.video_dir)
+        replays = []
+        for file in os.listdir(self.video_dir):
+            if str(file).split('.')[-1] == 'mp4':
+                replays.append(file)
+        for replay in replays:
+            with open(self.video_dir.joinpath(replay), 'rb') as f:
+                attachment = discord.File(f)
+                await self.get_channel(DisquidClient.replay_channel).send(replay, file=attachment)
 
     def get_prefix(self, gid: discord.Guild.id):
         """
@@ -191,8 +209,8 @@ class DisquidClient(discord.Client):
         """
         try:
             return self.players[uid]
-        except KeyError:  # in case of failure of the on_guild_join event
-            self.players[uid] = Player(uid, len(self.players) + 1)
+        except KeyError:
+            self.players[uid] = Player(uid)
             self.ranks.append(self.get_player(uid))
             return self.get_player(uid)
 
@@ -257,6 +275,8 @@ class DisquidClient(discord.Client):
         """
         print(f'Disquid {__version__} ready.')
         await self.get_channel(764699769829982218).send(f'Disquid {__version__} is now online and ready.')
+        if len(self.game_history) != len(os.listdir(self.video_dir)):
+            await self.regen_videos()
 
     async def on_guild_join(self, guild: discord.Guild):
         """
@@ -264,6 +284,13 @@ class DisquidClient(discord.Client):
         :param guild: Guild Class joined found at https://discordpy.readthedocs.io/en/latest/api.html#guild.
         """
         self.prefixes[guild.id] = self.default_prefix
+
+    async def on_guild_leave(self, guild: discord.Guild):
+        """
+        This is called when a bot leaves a "server".
+        :param guild: Guild Class joined found at https://discordpy.readthedocs.io/en/latest/api.html#guild.
+        """
+        del self.prefixes[guild.id]
 
     async def on_message(self, message: discord.Message, reindexing=False):
         """
@@ -457,25 +484,29 @@ class DisquidClient(discord.Client):
         custom_emoji_strings = [[]]
         for c_emoji in player.custom_emoji:
             custom_emoji_strings.append(str(c_emoji))
-        emoji_str = f'Primary Emojis (tile, base)\n{str(player.emoji[0]).strip("[").strip("]")}'\
-                    f'\n\nSecondary Emojis (tile, base)\n{str(player.emoji[1]).strip("[").strip("]")}'\
+        emoji_str = f'Primary Emojis (tile, base)\n{str(player.emoji[0]).strip("[").strip("]")}' \
+                    f'\n\nSecondary Emojis (tile, base)\n{str(player.emoji[1]).strip("[").strip("]")}' \
                     f'\n\nCustom Emojis\n{str(custom_emoji_strings).strip("[").strip("]").strip(",")}'
         embed_var.add_field(name='Emojis', value=emoji_str, inline=False)
-        embed_var.add_field(name='Rank', value=f'#{self.ranks.index(player)}/{len(self.players)} Worldwide', inline=False)
+        embed_var.add_field(name='Rank', value=f'#{self.ranks.index(player) + 1}/{len(self.players)} Worldwide',
+                            inline=False)
         embed_var.add_field(name='Elo', value=f'{player.elo}: '
                                               f'{player.elo_string() if self.ranks.index(player) != 0 else "Queen"}')
         await message.channel.send(embed=embed_var)
 
     @command(['top'])
     async def leaderboard(self, message: discord.Message):
+        """
+        Displays the top 10 players worldwide.
+        """
         embed_var = discord.Embed(title='Worldwide Leaderboard', color=0xc0365e)
         leaderboard_str = ''
         for i, player in enumerate(self.ranks):
-            if i >= 10:
+            if i > 9:
                 break
-            leaderboard_str += f'`[{i + 1}]`: {player.name}\n'
+            leaderboard_str += f'`[{player.elo}]`: {player.name}\n'
         embed_var.add_field(name='Top 10', value=leaderboard_str, inline=False)
-        message.channel.send(embed=embed_var)
+        await message.channel.send(embed=embed_var)
 
     @command(['c'])
     async def challenge(self, message: discord.Message):
@@ -790,7 +821,7 @@ class DisquidClient(discord.Client):
             if processed_message[0] == self.players[key].name:
                 await message.channel.send('Name taken.')
                 return
-        self.get_player(uid).name = str(processed_message[0])
+        self.get_player(uid).name = str(processed_message[0]).lower()
         for i in range(len(self.get_player(uid).custom_emoji)):
             if 'empty' not in self.get_player(uid).custom_emoji[i]:
                 if i == 0:
@@ -944,16 +975,11 @@ class DisquidClient(discord.Client):
             await self.update_board(game)
             winner.calc_elo(loser, True)
             loser.calc_elo(winner, False)
-            index = self.ranks.index(winner)
-            while index != 0 and winner.elo > self.ranks[index - 1].elo:
-                index -= 1
-            self.ranks.remove(winner)
-            self.ranks.insert(index, winner)
-            index = self.ranks.index(loser)
-            while index != len(self.ranks)-1 and loser.elo < self.ranks[index + 1].elo:
-                index += 1
-            self.ranks.remove(loser)
-            self.ranks.insert(index, loser)
+
+            def val(p):
+                return p.elo
+
+            self.ranks.sort(key=val, reverse=True)
 
         async def channel_del():
             await channel.send('Channel will be deleted in 1hr, and has been moved to game history.')
@@ -961,6 +987,7 @@ class DisquidClient(discord.Client):
             await channel.delete(reason='Game Complete')
 
         asyncio.run_coroutine_threadsafe(channel_del(), asyncio.get_event_loop())
+        await self.gen_replay(game)
 
     async def on_draw(self, game):
         channel = self.get_channel(game.channel_id)
@@ -975,6 +1002,14 @@ class DisquidClient(discord.Client):
             await channel.delete(reason='Game Complete')
 
         asyncio.run_coroutine_threadsafe(channel_del(), asyncio.get_event_loop())
+        await self.gen_replay(game)
+
+    async def gen_replay(self, game: Game):
+        game.to_video(self.data_path.joinpath('temp/'), self.video_dir)
+        replay = f'{game.players[0].name}-v-{game.players[1].name}.mp4'
+        with open(self.video_dir.joinpath(replay), 'rb') as f:
+            attachment = discord.File(f)
+            await self.get_channel(DisquidClient.replay_channel).send(replay, file=attachment)
 
     async def close(self):
         await self.save(bypass=True)

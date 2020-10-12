@@ -1,6 +1,9 @@
 import copy
 
+import cairo
 import discord
+from moviepy.editor import *
+import shutil
 
 from model.memory import *
 
@@ -149,6 +152,81 @@ class Game(object):
             return self.channel_id == other
         else:
             return NotImplemented
+
+    def to_video(self, temp_dir: Path, video_dir: Path, file_name: str = None):
+        if not file_name:
+            file_name = f'{self.players[0].name}-v-{self.players[1].name}'
+        images = []
+        for v, board in enumerate(self.cache.hist.board_history()):
+            arr = str(board).replace('#msg', '').split('\n')
+            final_arr = []
+            for i, line in enumerate(arr):
+                cell_arr = line.replace('||', '').split(':')
+                for r_cell in cell_arr:
+                    if r_cell == '':
+                        cell_arr.remove(r_cell)
+                for j, cell in enumerate(cell_arr):
+                    if 'p1' not in cell and 'p2' not in cell:
+                        cell_arr[j] = 'empty'
+                for cell in cell_arr:
+                    if 'p1' in cell or 'p2' in cell or 'p1b' in cell or 'p2b' in cell:
+                        char_arr = cell.replace('p1b', '3').replace('p2b', '4').replace('p1', '1').replace('p2', '2')
+                        for k, char in enumerate(char_arr):
+                            if k == len(char_arr) - 1:
+                                if char == '1':
+                                    cell_arr[cell_arr.index(cell)] = 'p1'
+                                elif char == '2':
+                                    cell_arr[cell_arr.index(cell)] = 'p2'
+                                elif char == '3':
+                                    cell_arr[cell_arr.index(cell)] = 'p1b'
+                                elif char == '4':
+                                    cell_arr[cell_arr.index(cell)] = 'p2b'
+                            else:
+                                if char == '1':
+                                    cell_arr.insert(cell_arr.index(cell), 'p1')
+                                elif char == '2':
+                                    cell_arr.insert(cell_arr.index(cell), 'p2')
+                                elif char == '3':
+                                    cell_arr.insert(cell_arr.index(cell), 'p1b')
+                                elif char == '4':
+                                    cell_arr.insert(cell_arr.index(cell), 'p2b')
+                if not len(line) == 0:
+                    final_arr.append(cell_arr)
+            width = 647
+            height = 324
+
+            surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, width, height)
+            ctx = cairo.Context(surface)
+
+            pat = cairo.SolidPattern(54.0 / 255, 57.0 / 255, 72.0 / 255)
+            ctx.set_source(pat)
+            ctx.rectangle(0, 0, width, height)
+            ctx.fill()
+
+            for i, line in enumerate(final_arr):
+                for j, cell in enumerate(line):
+                    if cell == 'empty':
+                        ctx.set_source_rgb(32.0 / 255, 34.0 / 255, 37.0 / 255)
+                    elif 'p1b' in cell:
+                        ctx.set_source_rgb(128.0 / 255, 30.0 / 255, 32.0 / 255)
+                    elif 'p2b' in cell:
+                        ctx.set_source_rgb(64.0 / 255, 57.0 / 255, 193.0 / 255)
+                    elif 'p1' in cell:
+                        ctx.set_source_rgb(221.0 / 255, 46.0 / 255, 68.0 / 255)
+                    elif 'p2' in cell:
+                        ctx.set_source_rgb(85.0 / 255, 172.0 / 255, 238.0 / 255)
+                    else:
+                        continue
+                    ctx.rectangle((j * 23) + 2, (i * 23) + 2, 22, 22)
+                    ctx.fill()
+            if not os.path.exists(temp_dir):
+                os.mkdir(temp_dir)
+            surface.write_to_png(str(temp_dir.joinpath(f'{v}.png').absolute()))
+            images.append(str(temp_dir.joinpath(f'{v}.png').absolute()))
+        clips = [ImageClip(m, duration=0.1) for m in images]
+        concat_clip = concatenate_videoclips(clips)
+        concat_clip.write_videofile(str(video_dir.joinpath(file_name)) + '.mp4', fps=10)
+        shutil.rmtree(temp_dir)
 
 
 class Utility:
