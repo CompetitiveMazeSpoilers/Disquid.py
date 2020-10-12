@@ -1,6 +1,8 @@
 import copy
 
 import cairo
+import PIL
+from PIL import Image
 import discord
 from moviepy.editor import *
 import shutil
@@ -304,6 +306,22 @@ class Utility:
                 if flag in flag_dec[0]:
                     return r, c
         return
+
+    @staticmethod
+    def color_estimate(asset=[]):
+        """
+        Takes in bytes of image and returns an estimation of the average color.
+        :param asset: Bytes of image to be estimated.
+        :return: Color estimation.
+        """
+        img = PIL.Image.frombytes('RGB', (22, 22), asset, 'raw')
+        colors = Image.Image.getcolors(img,maxcolors=4096)
+        most_color = colors[0]
+        for (count, color) in colors:
+            if count > most_color[0]:
+                most_color = (count, color)
+        rgb = most_color[1]
+        return rgb[0] + rgb[1] * 256 + rgb[2] * 256 * 256
 
 
 class InvalidGameSetup(Exception):

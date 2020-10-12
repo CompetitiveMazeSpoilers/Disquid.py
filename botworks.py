@@ -436,8 +436,42 @@ class DisquidClient(discord.Client):
         """
         await message.channel.send(f'{self.latency * 1000}ms')
 
+    @command()
+    async def emoji_test(self, message: discord.Message):
+        """
+        Tests emoji's color
+        """
+        emoji_name = self.get_player(message.author.id).emoji[0][0]
+        c_guild = self.get_guild(self.colors_guild)
+        d_guild = self.get_guild(self.debug_guild)
+        emoji = None
+        emoji_opts = {
+            ':black_large_square:': 0x31373d,
+            ':brown_square:': 0xc16a4f,
+            ':red_square:': 0xdd2e45,
+            ':orange_square:': 0xf4900c,
+            ':yellow_square:': 0xfdcc58,
+            ':green_square:': 0x78b159,
+            ':blue_square:': 0x55acee,
+            ':purple_square:': 0xaa8ed6,
+            ':white_large_square:': 0xe6e7e8
+        }
+        for e in c_guild.emojis:
+            if str(e) == emoji_name:
+                emoji = e
+        for e in d_guild.emojis:
+            if str(e) == emoji_name:
+                emoji = e
+        if emoji is not None:
+            color = Utility.color_estimate(await emoji.url.read())
+        elif emoji_name in emoji_opts.keys():
+            color = emoji_opts[emoji_name]
+        else:
+            color = 'not a thing'
+        await message.channel.send(color)
+
     @command(['changeprefix', 'cp'])
-    async def change_prefix(self, message: discord.message):
+    async def change_prefix(self, message: discord.Message):
         """
         [prefix] Usable by admins to change the bot's server prefix.
         """
@@ -449,7 +483,7 @@ class DisquidClient(discord.Client):
                 return
             self.prefixes.pop(message.guild.id)
             self.prefixes[message.guild.id] = processed_message[0]
-            message.guild.me.nick = f'[{processed_message[0]}]' + message.guild.me.nick
+            await message.guild.me.edit(nick=f'[{processed_message[0]}] ' + str(message.guild.me.name))
             await message.channel.send(f'Prefix is now \'{processed_message[0]}\'')
         else:
             await message.channel.send('Only administrators may do this.')
