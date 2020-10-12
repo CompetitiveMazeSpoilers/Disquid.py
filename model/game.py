@@ -227,6 +227,16 @@ class Utility:
                     return r, c
         return
 
+    @staticmethod
+    def color_estimate(asset=[]):
+        """
+        Takes in bytes of image and returns an estimation of the average color.
+        :param asset: Bytes of image to be estimated.
+        :return: Color estimation.
+        """
+
+        return 'no'
+
 
 class InvalidGameSetup(Exception):
     pass
