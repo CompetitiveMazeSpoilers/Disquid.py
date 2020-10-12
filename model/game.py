@@ -1,5 +1,7 @@
 import copy
 
+import PIL
+from PIL import Image
 import discord
 
 from model.memory import *
@@ -234,8 +236,14 @@ class Utility:
         :param asset: Bytes of image to be estimated.
         :return: Color estimation.
         """
-
-        return 'no'
+        img = PIL.Image.frombytes('RGB', (22, 22), asset, 'raw')
+        colors = Image.Image.getcolors(img,maxcolors=4096)
+        most_color = colors[0]
+        for (count, color) in colors:
+            if count > most_color[0]:
+                most_color = (count, color)
+        rgb = most_color[1]
+        return rgb[0] + rgb[1] * 256 + rgb[2] * 256 * 256
 
 
 class InvalidGameSetup(Exception):
