@@ -309,7 +309,7 @@ class Utility:
         return
 
     @staticmethod
-    def color_estimate(asset=[]):
+    def color_estimate(asset: []):
         """
         Takes in bytes of image and returns an estimation of the average color.
         :param asset: Bytes of image to be estimated.
@@ -318,13 +318,54 @@ class Utility:
         stream = io.BytesIO(asset)
         img = PIL.Image.open(stream)
 
-        colors = Image.Image.getcolors(img, maxcolors=256*256*256)
-        most_color = colors[0]
-        for (count, color) in colors:
+        colors = Image.Image.getcolors(img, maxcolors=256 * 256 * 256)
+        clumps = []
+        min_dist = 30
+        for color_item in colors:
+            print(str(color_item) + str(len(clumps)))
+            for i, (clump_item) in enumerate(clumps):
+                if color_item in colors and Utility.color_distance(color_item[1], clump_item[1]) < min_dist:
+                    clumps[i] = clump_item[0] + color_item[0], Utility.average_colors(clump_item[0], clump_item[1],
+                                                                                      color_item[0], color_item[1])
+                    colors.remove(color_item)
+            if color_item in colors:
+                clumps.append(color_item)
+
+        most_color = clumps[0]
+        for (count, color) in clumps:
             if count > most_color[0]:
                 most_color = (count, color)
         rgb = most_color[1]
         return rgb[0] + rgb[1] * 256 + rgb[2] * 256 * 256
+
+    @staticmethod
+    def color_distance(color1: (int, int, int, int), color2: (int, int, int, int)):
+        """
+        Takes in two colors and determines the distance between them.
+        :param color1: First color to compare (r,g,b,a)
+        :param color2: Second color to compare (r,g,b,a)
+        :return: Distance between the two colors
+        """
+        return pow(pow(color1[0] - color2[0], 2) + pow(color1[1] - color2[1], 2) + pow(color1[2] - color2[2], 2), .5)
+
+    @staticmethod
+    def average_colors(w1: float, color1: (int, int, int, int), w2: float, color2: (int, int, int, int)):
+        """
+        Takes in bytes of image and returns an estimation of the average color.
+        :param color1: First color to average (r,g,b,a)
+        :param color2: Second color to average (r,g,b,a)
+        :param w1: weight of first color
+        :param w2: weight of second color
+        :return: Weighted average of the two colors
+        """
+        c1w = w1/(w1+w2)
+        c2w = w2/(w1+w2)
+        red = pow(c1w * pow(color1[0], 2) + c2w * pow(color2[0], 2), .5)
+        green = pow(c1w * pow(color1[1], 2) + c2w * pow(color2[1], 2), .5)
+        blue = pow(c1w * pow(color1[2], 2) + c2w * pow(color2[2], 2), .5)
+
+        return round(red), round(green), round(blue), 255
+
 
 
 class InvalidGameSetup(Exception):
