@@ -1,6 +1,8 @@
 import asyncio
 import pickle
 
+from discord import Color
+
 from model.game import *
 
 __version__ = 'v1.0'
@@ -78,6 +80,7 @@ class DisquidClient(discord.Client):
     admins: []
     debug_guild = 762071050007609344
     colors_guild = 764673692650831893
+    official_guild = 762071050007609344
     replay_channel = 764879291057700884
 
     def __init__(self, prefix_file_name: str = 'prefixes', admin_file_name: str = 'admins',
@@ -202,6 +205,7 @@ class DisquidClient(discord.Client):
             self.prefixes[gid] = self.default_prefix
             return self.default_prefix
 
+
     def get_player(self, uid: discord.User.id):
         """
         Returns the player class for a given user id.
@@ -213,6 +217,16 @@ class DisquidClient(discord.Client):
             self.players[uid] = Player(uid)
             self.ranks.append(self.get_player(uid))
             return self.get_player(uid)
+
+    async def make_player_role(self, gid: discord.Guild.id, uid: discord.User.id):
+        """
+        Creates and assigns default role to player
+        """
+        if not gid == self.official_guild:
+            return
+        role = await self.get_guild(gid).create_role(name='dft', mentionable=True, color=discord.Color(0xdd2e45))
+        await self.get_guild(gid).get_member(uid).add_roles(role)
+        self.get_player(uid).role = role
 
     def search_name(self, name: str) -> int:
         """
@@ -274,7 +288,8 @@ class DisquidClient(discord.Client):
         Put any startup actions here.
         """
         print(f'Disquid {__version__} ready.')
-        await self.get_channel(764699769829982218).send(f'Disquid {__version__} is now online and ready.')
+        if self.get_channel(764699769829982218) is not None:
+            await self.get_channel(764699769829982218).send(f'Disquid {__version__} is now online and ready.')
         if len(self.game_history) != len(os.listdir(self.video_dir)):
             await self.regen_videos()
 
@@ -354,8 +369,12 @@ class DisquidClient(discord.Client):
                 cache.current_player = 3 - cache.current_player
                 cache.move = None
                 if not reindexing:
-                    await message.channel.send(
-                        f'It is now <@{game.players[game.cache.current_player - 1].uid}>\'s turn.')
+                    if game.players[game.cache.current_player - 1].role is not None:
+                        send = (f'It is {game.players[game.cache.current_player - 1].role.mention}/'
+                                f'<@{game.players[game.cache.current_player - 1].uid}>\'s turn! ')
+                    else:
+                        send = f'It is <@{game.players[game.cache.current_player - 1].uid}>\'s turn! '
+                    await message.channel.send(send)
             except InvalidMove:
                 move_prefix = message.content.split()[0]
                 if move_prefix == 'V' and not reindexing:
@@ -377,7 +396,11 @@ class DisquidClient(discord.Client):
         del processed_message[0]
         if len(processed_message) == 0:
             active_descs = {}
-            embed_var = discord.Embed(title="Help Commands", color=0xc0365e)
+            if self.get_player(message.author.id).role is not None:
+                color = self.get_player(message.author.id).role.color
+            else:
+                color = 0xc0365e
+            embed_var = discord.Embed(title="Help Commands", color=color)
             for key in commands:
                 if is_admin or not commands[key].hidden:
                     aliases = []
@@ -436,12 +459,10 @@ class DisquidClient(discord.Client):
         """
         await message.channel.send(f'{self.latency * 1000}ms')
 
-    @command()
-    async def emoji_test(self, message: discord.Message):
+    async def emoji_color_test(self, emoji_name: str):
         """
-        Tests emoji's color
+        Returns color that estimates prominent color of emoji
         """
-        emoji_name = self.get_player(message.author.id).emoji[0][0]
         c_guild = self.get_guild(self.colors_guild)
         d_guild = self.get_guild(self.debug_guild)
         emoji = None
@@ -449,10 +470,12 @@ class DisquidClient(discord.Client):
             ':black_large_square:': 0x31373d,
             ':brown_square:': 0xc16a4f,
             ':red_square:': 0xdd2e45,
+            ':red_circle:': 0xdd2e45,
             ':orange_square:': 0xf4900c,
             ':yellow_square:': 0xfdcc58,
             ':green_square:': 0x78b159,
             ':blue_square:': 0x55acee,
+            ':blue_circle:': 0x55acee,
             ':purple_square:': 0xaa8ed6,
             ':white_large_square:': 0xe6e7e8
         }
@@ -467,8 +490,11 @@ class DisquidClient(discord.Client):
         elif emoji_name in emoji_opts.keys():
             color = emoji_opts[emoji_name]
         else:
-            color = 'not a thing'
-        await message.channel.send(color)
+            color = 0xffffff
+        if color == 0:
+            color = 65793
+        print(color)
+        return color
 
     @command(['changeprefix', 'cp'])
     async def change_prefix(self, message: discord.Message):
@@ -647,9 +673,14 @@ class DisquidClient(discord.Client):
             board_string = str(target_game)
             for substring in board_string.split('#msg'):
                 await message.channel.send(substring)
-            await message.channel.send(
-                f'It is <@{target_game.players[target_game.cache.current_player - 1].uid}>\'s turn! '
-                f'Do \'{self.get_prefix(message.guild.id)}help moves\' for move help')
+            if target_game.players[target_game.cache.current_player - 1].role is not None:
+                send = (f'It is {target_game.players[target_game.cache.current_player - 1].role.mention}/'
+                        f'<@{target_game.players[target_game.cache.current_player - 1].uid}>\'s turn! '
+                        f'Do \'{self.get_prefix(message.guild.id)}help moves\' for move help')
+            else:
+                send = (f'It is <@{target_game.players[target_game.cache.current_player - 1].uid}>\'s turn! '
+                        f'Do \'{self.get_prefix(message.guild.id)}help moves\' for move help')
+            await message.channel.send(send)
             return
         await message.channel.send(
             f'No waiting game found, please use {self.get_prefix(message.guild.id)}challenge to make one.')
@@ -755,9 +786,14 @@ class DisquidClient(discord.Client):
             elif tile_favor and tile_type and emoji_name:
                 emoji_owner.emoji[tile_favor - 1][tile_type - 1] = str(emoji_name)
                 await message.channel.send(f'Success! {emoji_name} has been set')
-
             else:
                 await message.channel.send('Arguments invalid. Check help command')
+
+            if tile_favor == 1 and tile_type == 2:
+                if emoji_owner.role is None:
+                    await self.make_player_role(gid=message.guild.id, uid=message.author.id)
+                await self.get_player(message.author.id).role.edit(
+                    color=discord.Color(await self.emoji_color_test(emoji_owner.emoji[0][1])))
 
     @command(['upload'])
     async def upload_emoji(self, message: discord.Message):
@@ -862,6 +898,10 @@ class DisquidClient(discord.Client):
                     await self.get_player(uid).custom_emoji[0].edit(name=str(processed_message[0]) + '_b')
                 if i == 1:
                     await self.get_player(uid).custom_emoji[1].edit(name=str(processed_message[0]))
+
+        if self.get_player(uid).role is None:
+            await self.make_player_role(gid=message.guild.id, uid=uid)
+        await self.get_player(uid).role.edit(name=str(processed_message[0]).lower())
         await message.channel.send('Name changed successfully!')
 
     @command(['delgame', 'del'])
@@ -909,12 +949,14 @@ class DisquidClient(discord.Client):
                 replay = False
             if message.mentions and len(message.mentions) == 2:
                 await self.delete_game(message)
-                self.active_games[message.channel.id] = Game(channel_id, [self.get_player(message.mentions[0].id),
-                                                                          self.get_player(message.mentions[1].id)])
+                self.active_games[message.channel.id] = Game(channel_id,
+                                                             [self.get_player(message.mentions[0].id),
+                                                            self.get_player(message.mentions[1].id)])
             elif len(message.mentions) == 1 and not len(str(message.content).split()) < 3:
                 await self.delete_game(message)
-                self.active_games[message.channel.id] = Game(channel_id, [self.get_player(message.mentions[0].id),
-                                                                          self.get_player(message.mentions[0].id)])
+                self.active_games[message.channel.id] = Game(channel_id,
+                                                             [self.get_player(message.mentions[0].id),
+                                                            self.get_player(message.mentions[0].id)])
             else:
                 await message.channel.send(
                     'Invalid arguments, please mention both players in order for the command to be successful.')
@@ -995,8 +1037,12 @@ class DisquidClient(discord.Client):
         for final_substring in str(game).split('#msg'):
             await channel.send(final_substring)
         if turn_incicator:
-            await channel.send(
-                f'It is now <@{game.players[game.cache.current_player - 1].uid}>\'s turn.')
+            if game.players[game.cache.current_player - 1].role is not None:
+                send = (f'It is {game.players[game.cache.current_player - 1].role.mention}/'
+                        f'<@{game.players[game.cache.current_player - 1].uid}>\'s turn! ')
+            else:
+                send = f'It is <@{game.players[game.cache.current_player - 1].uid}>\'s turn! '
+            await channel.send(send)
 
     async def on_win(self, game):
         channel = self.get_channel(game.channel_id)

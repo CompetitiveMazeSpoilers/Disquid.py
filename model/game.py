@@ -5,6 +5,7 @@ import cairo
 import PIL
 from PIL import Image
 import discord
+from discord import Role
 from moviepy.editor import *
 import shutil
 
@@ -29,16 +30,17 @@ class Player(object):
         0: 'Delinquent',
         100: 'Quartermaster',
         200: 'Squire',
-        300: 'Marquee',
+        300: 'Marquis',
         400: 'Conquistador'
     }
 
-    def __init__(self, uid: int, elo: int = 0, emoji: EmojiArray = default_emoji, name: str = 'dft'):
+    def __init__(self, uid: int, elo: int = 0, emoji: EmojiArray = default_emoji, name: str = 'dft', role: Role = None):
         self.uid = uid
         self.elo = elo
         self.emoji = copy.deepcopy(emoji)
         self.custom_emoji = ['empty', 'empty']
         self.name = name
+        self.role = role
 
     def calc_elo(self, ply2, win: bool):
         p1 = (1.0 / (1.0 + pow(10, (ply2.elo - self.elo) / 100)))
@@ -322,6 +324,7 @@ class Utility:
         clumps = []
         min_dist = 30
         for color_item in colors:
+            print(color_item)
             print(str(color_item) + str(len(clumps)))
             for i, (clump_item) in enumerate(clumps):
                 if color_item in colors and Utility.color_distance(color_item[1], clump_item[1]) < min_dist:
@@ -336,7 +339,7 @@ class Utility:
             if count > most_color[0]:
                 most_color = (count, color)
         rgb = most_color[1]
-        return rgb[0] + rgb[1] * 256 + rgb[2] * 256 * 256
+        return rgb[2] + rgb[1] * 256 + rgb[0] * 256 * 256
 
     @staticmethod
     def color_distance(color1: (int, int, int, int), color2: (int, int, int, int)):
