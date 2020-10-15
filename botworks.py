@@ -643,7 +643,11 @@ class DisquidClient(discord.Client):
             self.queued_player = self.get_player(id)
             await message.channel.send('Player is now queued for a challenge.')
         else:
-            chal = Challenge(self.queued_player, self.get_player(id))
+            p2 = self.get_player(id)
+            if p2 == self.queued_player:
+                await message.channel.send('Player is already queued')
+                return
+            chal = Challenge(self.queued_player, p2)
             self.active_challenges.append(chal)
             self.queued_player = None
             await self.confirm_challenge(message, chal)
