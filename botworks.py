@@ -640,7 +640,7 @@ class DisquidClient(discord.Client):
         """
         Inserts current user into challenge queue.
         """
-        if not message.channel.id = Disquid.matchmaking_channel:
+        if not message.channel.id = DisquidClient.matchmaking_channel:
             return
         id = message.author.id
         if not self.queued_player:
