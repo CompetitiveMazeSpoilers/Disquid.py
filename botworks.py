@@ -1,8 +1,6 @@
 import asyncio
 import pickle
 
-from discord import Color
-
 from model.game import *
 
 __version__ = 'v1.0'
@@ -214,7 +212,6 @@ class DisquidClient(discord.Client):
         except KeyError:  # in case of failure of the on_guild_join event
             self.prefixes[gid] = self.default_prefix
             return self.default_prefix
-
 
     def get_player(self, uid: discord.User.id):
         """
@@ -654,7 +651,11 @@ class DisquidClient(discord.Client):
             self.queued_player = self.get_player(id)
             await message.channel.send('Player is now queued for a challenge.')
         else:
-            chal = Challenge(self.queued_player, self.get_player(id))
+            p2 = self.get_player(id)
+            if p2 == self.queued_player:
+                await message.channel.send('Player is already queued')
+                return
+            chal = Challenge(self.queued_player, p2)
             self.active_challenges.append(chal)
             self.queued_player = None
             await self.confirm_challenge(message, chal)
@@ -764,8 +765,8 @@ class DisquidClient(discord.Client):
         """
         Refreshes the board if used in an active game channel.
         """
-        if message.channel.id in self.active_games and message.author.id in self.active_games[
-            message.channel.id].players:
+        if message.channel.id in self.active_games and (message.author.id in self.active_games[
+            message.channel.id].players or message.author.guild_permissions.administrator):
             await self.update_board(self.active_games[message.channel.id], True)
         else:
             await message.channel.send('No board to update here.')
@@ -998,12 +999,12 @@ class DisquidClient(discord.Client):
                 await self.delete_game(message)
                 self.active_games[message.channel.id] = Game(channel_id,
                                                              [self.get_player(message.mentions[0].id),
-                                                            self.get_player(message.mentions[1].id)])
+                                                              self.get_player(message.mentions[1].id)])
             elif len(message.mentions) == 1 and not len(str(message.content).split()) < 3:
                 await self.delete_game(message)
                 self.active_games[message.channel.id] = Game(channel_id,
                                                              [self.get_player(message.mentions[0].id),
-                                                            self.get_player(message.mentions[0].id)])
+                                                              self.get_player(message.mentions[0].id)])
             else:
                 await message.channel.send(
                     'Invalid arguments, please mention both players in order for the command to be successful.')
