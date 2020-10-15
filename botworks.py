@@ -224,11 +224,10 @@ class DisquidClient(discord.Client):
         """
         Creates and assigns default role to player
         """
-        if not gid == self.official_guild:
-            return
-        role = await self.get_guild(gid).create_role(name='dft', mentionable=True, color=discord.Color(0xdd2e45))
-        await self.get_guild(gid).get_member(uid).add_roles(role)
-        self.get_player(uid).role = role
+        if gid == self.official_guild:
+            role = await self.get_guild(gid).create_role(name='dft', mentionable=True, color=discord.Color(0xdd2e45))
+            await self.get_guild(gid).get_member(uid).add_roles(role)
+            self.get_player(uid).role = role
 
     def search_name(self, name: str) -> int:
         """
@@ -640,7 +639,7 @@ class DisquidClient(discord.Client):
         """
         Inserts current user into challenge queue.
         """
-        if not message.channel.id = DisquidClient.matchmaking_channel:
+        if not message.channel.id == DisquidClient.matchmaking_channel:
             return
         id = message.author.id
         if not self.queued_player:
@@ -703,6 +702,20 @@ class DisquidClient(discord.Client):
                 send = (f'It is <@{target_game.players[target_game.cache.current_player - 1].uid}>\'s turn! '
                         f'Do \'{self.get_prefix(message.guild.id)}help moves\' for move help')
             await message.channel.send(send)
+            if message.guild.id == self.official_guild:
+                used_emoji = []
+                for i, (player) in enumerate(target_game.players):
+                    emoji_num = 0
+                    emoji = player.emoji[emoji_num][0]
+                    while emoji in used_emoji:
+                        emoji_num += 1
+                        emoji = player.emoji[emoji_num][0]
+                    used_emoji.append(emoji)
+                    role = await self.get_guild(message.guild.id).create_role(name=message.channel.name,
+                                                                color=discord.Color(await self.emoji_color_test(emoji)))
+                    await self.get_guild(message.guild.id).get_member(player.uid).add_roles(role)
+                    target_game.roles[i] = role
+
             return
         await message.channel.send(
             f'No waiting game found, please use {self.get_prefix(message.guild.id)}challenge to make one.')
@@ -934,6 +947,10 @@ class DisquidClient(discord.Client):
         """
         if message.author.guild_permissions.administrator:
             channel_id = message.channel.id
+
+            for role in self.active_games.get(channel_id).roles:
+                role.delete()
+
             processed_message = str(message.content).split()
             del processed_message[0]
             if channel_id in self.active_games:
@@ -1071,6 +1088,8 @@ class DisquidClient(discord.Client):
         winner = game.players[game.cache.current_player - 1]
         loser = game.players[(3 - game.cache.current_player) - 1]
         await channel.send(f'<@{winner.uid}> WINS!')
+        for role in game.roles:
+            await role.delete()
         self.active_games.pop(channel.id)
         if game.channel_id not in self.game_history:
             self.game_history.append(game)
@@ -1094,6 +1113,8 @@ class DisquidClient(discord.Client):
     async def on_draw(self, game):
         channel = self.get_channel(game.channel_id)
         await channel.send('Game ends in a draw. Shake hands now.')
+        for role in game.roles:
+            await role.delete()
         self.active_games.pop(channel.id)
         if game.channel_id not in self.active_games:
             self.game_history.append(game)

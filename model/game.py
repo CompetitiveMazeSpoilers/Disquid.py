@@ -92,7 +92,7 @@ class Game(object):
     standard_height = 14
 
     def __init__(self, channel_id: discord.TextChannel.id, players: [Player], r: int = standard_height,
-                 c: int = standard_width, bases: [Position] = None):
+                 c: int = standard_width, bases: [Position] = None, roles: [Role] = [None, None]):
         self.channel_id = channel_id
         self.players = players
         if not bases:
@@ -103,6 +103,7 @@ class Game(object):
         self.history = History(r, c, bases, [])
         self.cache = Cache(self.history)
         self.draw_suggested = 0
+        self.roles = roles
 
     def __str__(self):
         board_string = str(self.cache.latest)
