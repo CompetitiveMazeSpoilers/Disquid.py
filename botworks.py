@@ -82,6 +82,7 @@ class DisquidClient(discord.Client):
     colors_guild = 764673692650831893
     official_guild = 762071050007609344
     replay_channel = 764879291057700884
+    matchmaking_channel = 764882689446248489
 
     def __init__(self, prefix_file_name: str = 'prefixes', admin_file_name: str = 'admins',
                  player_file_name: str = 'players', game_file_name: str = 'games',
@@ -639,6 +640,8 @@ class DisquidClient(discord.Client):
         """
         Inserts current user into challenge queue.
         """
+        if not message.channel.id = Disquid.matchmaking_channel:
+            return
         id = message.author.id
         if not self.queued_player:
             self.queued_player = self.get_player(id)
