@@ -634,7 +634,7 @@ class DisquidClient(discord.Client):
             return
         await self.confirm_challenge(message, temp_chal)
 
-    @command('q')
+    @command(['q'])
     async def queue(self, message: discord.Message):
         """
         Inserts current user into challenge queue.
