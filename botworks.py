@@ -136,6 +136,7 @@ class DisquidClient(discord.Client):
 
         # Active Challenge list
         self.active_challenges: [Challenge] = []
+        self.queued_player = None
 
         # Active Game file loading
         if not os.path.exists(self.game_file):
@@ -631,8 +632,26 @@ class DisquidClient(discord.Client):
             await message.channel.send('Too many or too few players mentioned, '
                                        'accept failed.')
             return
+        await self.confirm_challenge(message, temp_chal)
+
+    @command('q')
+    async def queue(self, message: discord.Message):
+        """
+        Inserts current user into challenge queue.
+        """
+        id = message.author.id
+        if not self.queued_player:
+            self.queued_player = self.get_player(id)
+            await message.channel.send('Player is now queued for a challenge.')
+        else:
+            chal = Challenge(self.queued_player, self.get_player(id))
+            self.active_challenges.append(chal)
+            self.queued_player = None
+            await self.confirm_challenge(message, chal)
+
+    async def confirm_challenge(self, message: discord.Message, chal: Challenge):
         for c in self.active_challenges:
-            if temp_chal == c:
+            if chal == c:
                 channel = message.channel
                 guild = channel.guild
                 category = None
