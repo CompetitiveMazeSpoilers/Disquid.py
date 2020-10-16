@@ -53,7 +53,7 @@ class Player(object):
         d = Player.rank_names
         for num in d:
             if self.elo >= num:
-                s = d[0]
+                s = d[num]
         return s
 
     def __eq__(self, other):

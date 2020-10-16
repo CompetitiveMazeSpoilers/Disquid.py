@@ -1080,13 +1080,16 @@ class DisquidClient(discord.Client):
             await message.channel.send('Insufficient user permissions.')
 
     async def update_rank_role(self, guild: discord.Guild, player: Player):
-        if guild == self.official_guild:
-            for role in guild.get_member(player.uid).roles:
-                if role.name in self.rank_roles.keys and not role.name == player.elo_string:
-                    await guild.get_member(player.uid).remove_roles(role)
-                    for new_role in guild.roles:
-                        if new_role.id == self.rank_roles[str(player.elo_string)]:
-                            await guild.get_member(player.uid).add_roles(new_role)
+        if guild.id == self.official_guild:
+            try:
+                for role in guild.get_member(player.uid).roles:
+                    if role.id in self.rank_roles.values() and not role.id == self.rank_roles[player.elo_string()]:
+                        await guild.get_member(player.uid).remove_roles(role)
+                for new_role in guild.roles:
+                    if new_role.id == self.rank_roles[player.elo_string()]:
+                        await guild.get_member(player.uid).add_roles(new_role)
+            except KeyError:
+                print('no role: '+player.elo_string())
 
     @command(['elo'], True)
     async def set_elo(self, message: discord.Message):
@@ -1099,9 +1102,14 @@ class DisquidClient(discord.Client):
                 await message.channel.send('No argument provided!')
             for mention in mentions:
                 self.get_player(mention.id).elo = int(str(message.content).split()[1])
-                if message.guild == self.official_guild:
+
+                def val(p):
+                    return p.elo
+
+                self.ranks.sort(key=val, reverse=True)
+                if message.guild.id == self.official_guild:
                     await self.update_rank_role(message.guild, self.get_player(mention.id))
-                await message.channel.send(f'@<{mention.id}>\'s elo has been set.')
+                await message.channel.send(f'<@{mention.id}>\'s elo has been set.')
         else:
             await message.channel.send('Insufficient user permissions.')
 
@@ -1131,7 +1139,7 @@ class DisquidClient(discord.Client):
             await self.update_board(game)
             winner.calc_elo(loser, True)
             loser.calc_elo(winner, False)
-            if channel.guild == self.official_guild:
+            if channel.guild.id == self.official_guild:
                 for player in game.players:
                     await self.update_rank_role(channel.guild, player)
 
