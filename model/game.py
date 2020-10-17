@@ -54,7 +54,7 @@ class Player(object):
         d = Player.rank_names
         for num in d:
             if self.elo >= num:
-                s = d[0]
+                s = d[num]
         return s
 
     def __eq__(self, other):
@@ -322,7 +322,7 @@ class Utility:
         stream = io.BytesIO(asset)
         img = PIL.Image.open(stream)
 
-        colors = Image.Image.getcolors(img, maxcolors=256 * 256 * 256)
+        colors = Image.Image.getcolors(img, maxcolors=128 * 128)
         clumps = []
         min_dist = 30
         for color_item in colors:

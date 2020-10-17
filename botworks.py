@@ -79,16 +79,18 @@ class DisquidClient(discord.Client):
     admins: []
     debug_guild = 762071050007609344
     colors_guild = 764673692650831893
-    official_guild = 762071050007609344
+    official_guild = 764695476880408586
     replay_channel = 764879291057700884
     matchmaking_channel = 764882689446248489
     rank_roles = {
-        # "Queen": 766082499536879647,
         "Conquistador": 766082501705203713,
         "Marquis": 766082503789379584,
         "Squire": 766082505224224818,
         "Quartermaster": 766082506255892481,
         "Delinquent": 766082890211393546
+    }
+    title_roles = {
+        "Queen": 766082499536879647
     }
 
     def __init__(self, prefix_file_name: str = 'prefixes', admin_file_name: str = 'admins',
@@ -232,7 +234,9 @@ class DisquidClient(discord.Client):
         """
         if gid == self.official_guild:
             role = await self.get_guild(gid).create_role(name='dft', mentionable=True, color=discord.Color(0xdd2e45))
-            await self.get_guild(gid).get_member(uid).add_roles(role)
+            member = await self.get_guild(gid).get_member(uid)
+            assert not member, "Member not found"
+            member.add_roles(role)
             self.get_player(uid).role_id = role.id
 
     def search_name(self, name: str) -> int:
@@ -558,8 +562,14 @@ class DisquidClient(discord.Client):
         embed_var.add_field(name='Emojis', value=emoji_str, inline=False)
         embed_var.add_field(name='Rank', value=f'#{self.ranks.index(player) + 1}/{len(self.players)} Worldwide',
                             inline=False)
+        title = None
+        for role_name, role_id in zip(self.title_roles.keys(), self.title_roles.values()):
+            if self.get_guild(self.official_guild).get_role(role_id) in self.get_guild(self.official_guild).get_member(
+                    prof_id).roles:
+                title = role_name
+
         embed_var.add_field(name='Elo', value=f'{player.elo}: '
-                                              f'{player.elo_string() if self.ranks.index(player) != 0 else "Queen"}')
+                                              f'{player.elo_string() if title is None else title}')
         await message.channel.send(embed=embed_var)
 
     @command(['top'])
@@ -838,11 +848,11 @@ class DisquidClient(discord.Client):
             else:
                 await message.channel.send('Arguments invalid. Check help command')
 
-            if tile_favor == 1 and tile_type == 2:
-                if emoji_owner.role_id:
+            if tile_favor == 1 and tile_type == 2 and message.guild.id == self.official_guild:
+                if not emoji_owner.role_id:
                     await self.make_player_role(gid=message.guild.id, uid=message.author.id)
-                await self.get_player(message.author.id).role_id.edit(
-                    color=discord.Color(await self.emoji_color_test(emoji_owner.emoji[0][1])))
+                    await self.get_player(message.author.id).role_id.edit(
+                        color=discord.Color(await self.emoji_color_test(emoji_owner.emoji[0][1])))
 
     @command(['upload'])
     async def upload_emoji(self, message: discord.Message):
@@ -949,7 +959,7 @@ class DisquidClient(discord.Client):
                     await self.get_player(uid).custom_emoji[1].edit(name=str(processed_message[0]))
 
         if message.guild.id == self.official_guild:
-            if self.get_player(uid).role_id:
+            if not self.get_player(uid).role_id:
                 await self.make_player_role(gid=message.guild.id, uid=uid)
             await message.guild.get_member(uid).get_role(self.get_player(uid).role_id).edit(
                 name=str(processed_message[0]).lower())
@@ -1087,13 +1097,16 @@ class DisquidClient(discord.Client):
             await message.channel.send('Insufficient user permissions.')
 
     async def update_rank_role(self, guild: discord.Guild, player: Player):
-        if guild == self.official_guild:
-            for role in guild.get_member(player.uid).roles:
-                if role.name in self.rank_roles.keys and not role.name == player.elo_string:
-                    await guild.get_member(player.uid).remove_roles(role)
-                    for new_role in guild.roles:
-                        if new_role.id == self.rank_roles[str(player.elo_string)]:
-                            await guild.get_member(player.uid).add_roles(new_role)
+        if guild.id == self.official_guild:
+            try:
+                for role in guild.get_member(player.uid).roles:
+                    if role.id in self.rank_roles.values() and not role.id == self.rank_roles[player.elo_string()]:
+                        await guild.get_member(player.uid).remove_roles(role)
+                for new_role in guild.roles:
+                    if new_role.id == self.rank_roles[player.elo_string()]:
+                        await guild.get_member(player.uid).add_roles(new_role)
+            except KeyError:
+                print('no role: ' + player.elo_string())
 
     @command(['elo'], True)
     async def set_elo(self, message: discord.Message):
@@ -1106,9 +1119,32 @@ class DisquidClient(discord.Client):
                 await message.channel.send('No argument provided!')
             for mention in mentions:
                 self.get_player(mention.id).elo = int(str(message.content).split()[1])
-                if message.guild == self.official_guild:
+
+                def val(p):
+                    return p.elo
+
+                self.ranks.sort(key=val, reverse=True)
+                if message.guild.id == self.official_guild:
                     await self.update_rank_role(message.guild, self.get_player(mention.id))
-                await message.channel.send(f'@<{mention.id}>\'s elo has been set.')
+                await message.channel.send(f'<@{mention.id}>\'s elo has been set.')
+        else:
+            await message.channel.send('Insufficient user permissions.')
+
+    @command(['queen', 'crown'], True)
+    async def assign_queen(self, message: discord.Message):
+        """
+        [@mention] Crowns a new queen, removing the role from anyone who has it first.
+        """
+        mentions = message.mentions
+        if message.author.id in DisquidClient.admins and message.guild.id == self.official_guild:
+            if len(mentions) == 0:
+                await message.channel.send('No argument provided!')
+            for mention in mentions:
+                for member in message.guild.members:
+                    if message.guild.get_role(self.title_roles['Queen']) in member.roles:
+                        await member.remove_roles(message.guild.get_role(self.title_roles['Queen']))
+                await message.guild.get_member(mention.id).add_roles(message.guild.get_role(self.title_roles['Queen']))
+                await message.channel.send(f'<@{mention.id}> has been crowned Queen!')
         else:
             await message.channel.send('Insufficient user permissions.')
 
@@ -1140,7 +1176,7 @@ class DisquidClient(discord.Client):
             await self.update_board(game)
             winner.calc_elo(loser, True)
             loser.calc_elo(winner, False)
-            if channel.guild == self.official_guild:
+            if channel.guild.id == self.official_guild:
                 for player in game.players:
                     await self.update_rank_role(channel.guild, player)
 
