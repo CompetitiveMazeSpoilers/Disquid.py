@@ -322,7 +322,7 @@ class Utility:
         stream = io.BytesIO(asset)
         img = PIL.Image.open(stream)
 
-        colors = Image.Image.getcolors(img, maxcolors=128 * 128)
+        colors = Image.Image.getcolors(img, maxcolors=256 * 256 * 256)
         clumps = []
         min_dist = 30
         for color_item in colors:
