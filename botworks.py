@@ -78,7 +78,7 @@ class DisquidClient(discord.Client):
     admins: []
     debug_guild = 762071050007609344
     colors_guild = 764673692650831893
-    official_guild = 764695476880408586
+    official_guild = 762071050007609344
     replay_channel = 764879291057700884
     matchmaking_channel = 764882689446248489
     rank_roles = {
