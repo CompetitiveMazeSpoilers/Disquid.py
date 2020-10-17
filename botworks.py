@@ -841,7 +841,7 @@ class DisquidClient(discord.Client):
             else:
                 await message.channel.send('Arguments invalid. Check help command')
 
-            if tile_favor == 1 and tile_type == 2:
+            if tile_favor == 1 and tile_type == 2 and message.guild.id == self.official_guild:
                 if emoji_owner.role is None:
                     await self.make_player_role(gid=message.guild.id, uid=message.author.id)
                 await self.get_player(message.author.id).role.edit(
