@@ -35,7 +35,7 @@ class Player(object):
     }
 
     def __init__(self, uid: int, elo: int = 0, emoji: EmojiArray = default_emoji, name: str = 'dft',
-                 role_id: Role.id = None):
+                 role_id: Role = None):
         self.uid = uid
         self.elo = elo
         self.emoji = copy.deepcopy(emoji)
