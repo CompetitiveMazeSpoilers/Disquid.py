@@ -1,13 +1,13 @@
 import copy
 import io
-import shutil
 
-import PIL
 import cairo
-import discord
+import PIL
 from PIL import Image
+import discord
 from discord import Role
 from moviepy.editor import *
+import shutil
 
 from model.memory import *
 
@@ -34,14 +34,13 @@ class Player(object):
         400: 'Conquistador'
     }
 
-    def __init__(self, uid: int, elo: int = 0, emoji: EmojiArray = default_emoji, name: str = 'dft',
-                 role_id: Role = None):
+    def __init__(self, uid: int, elo: int = 0, emoji: EmojiArray = default_emoji, name: str = 'dft', role: Role = None):
         self.uid = uid
         self.elo = elo
         self.emoji = copy.deepcopy(emoji)
         self.custom_emoji = ['empty', 'empty']
         self.name = name
-        self.role_id = role_id
+        self.role = role
 
     def calc_elo(self, ply2, win: bool):
         p1 = (1.0 / (1.0 + pow(10, (ply2.elo - self.elo) / 100)))
@@ -93,7 +92,7 @@ class Game(object):
     standard_height = 14
 
     def __init__(self, channel_id: discord.TextChannel.id, players: [Player], r: int = standard_height,
-                 c: int = standard_width, bases: [Position] = None, role_ids: [Role] = None):
+                 c: int = standard_width, bases: [Position] = None, roles: [Role] = [None, None]):
         self.channel_id = channel_id
         self.players = players
         if not bases:
@@ -104,7 +103,7 @@ class Game(object):
         self.history = History(r, c, bases, [])
         self.cache = Cache(self.history)
         self.draw_suggested = 0
-        self.role_ids = [None, None] if not role_ids else role_ids
+        self.roles = roles
 
     def __str__(self):
         board_string = str(self.cache.latest)
@@ -363,13 +362,14 @@ class Utility:
         :param w2: weight of second color
         :return: Weighted average of the two colors
         """
-        c1w = w1 / (w1 + w2)
-        c2w = w2 / (w1 + w2)
+        c1w = w1/(w1+w2)
+        c2w = w2/(w1+w2)
         red = pow(c1w * pow(color1[0], 2) + c2w * pow(color2[0], 2), .5)
         green = pow(c1w * pow(color1[1], 2) + c2w * pow(color2[1], 2), .5)
         blue = pow(c1w * pow(color1[2], 2) + c2w * pow(color2[2], 2), .5)
 
         return round(red), round(green), round(blue), 255
+
 
 
 class InvalidGameSetup(Exception):
