@@ -235,8 +235,8 @@ class DisquidClient(discord.Client):
         if gid == self.official_guild:
             role = await self.get_guild(gid).create_role(name='dft', mentionable=True, color=discord.Color(0xdd2e45))
             member = await self.get_guild(gid).get_member(uid)
-            if member:
-                member.add_roles(role)
+            assert not member, "Member not found"
+            member.add_roles(role)
             self.get_player(uid).role_id = role.id
 
     def search_name(self, name: str) -> int:
@@ -381,7 +381,7 @@ class DisquidClient(discord.Client):
                 cache.current_player = 3 - cache.current_player
                 cache.move = None
                 if not reindexing:
-                    if game.players[game.cache.current_player - 1].role_id:
+                    if game.players[game.cache.current_player - 1].role_id is not None:
                         send = (f'It is {game.players[game.cache.current_player - 1].mention}/'
                                 f'<@{game.players[game.cache.current_player - 1].uid}>\'s turn! ')
                     else:
@@ -408,7 +408,7 @@ class DisquidClient(discord.Client):
         del processed_message[0]
         if len(processed_message) == 0:
             active_descs = {}
-            if self.get_player(message.author.id).role_id:
+            if self.get_player(message.author.id).role_id is not None:
                 color = await message.author.get_role(self.get_player(message.author.id).role_id).color
             else:
                 color = 0xc0365e
@@ -716,9 +716,9 @@ class DisquidClient(discord.Client):
             for substring in board_string.split('#msg'):
                 await message.channel.send(substring)
             player = target_game.players[target_game.cache.current_player - 1]
-            if player.role_id:
+            if player.role_id is not None:
                 send = (
-                    f'It is {await message.author.get_role(player.role_id).mention} '
+                    f'It is {await message.guild.get_member(player.uid).get_role(player.role_id).mention} '
                     f'<@{target_game.players[target_game.cache.current_player - 1].uid}>\'s turn! '
                     f'Do \'{self.get_prefix(message.guild.id)}help moves\' for move help')
             else:
@@ -961,7 +961,7 @@ class DisquidClient(discord.Client):
         if message.guild.id == self.official_guild:
             if not self.get_player(uid).role_id:
                 await self.make_player_role(gid=message.guild.id, uid=uid)
-            await message.author.get_role(self.get_player(uid).role_id).edit(
+            await message.guild.get_member(uid).get_role(self.get_player(uid).role_id).edit(
                 name=str(processed_message[0]).lower())
             await message.channel.send('Name changed successfully!')
 
@@ -976,7 +976,7 @@ class DisquidClient(discord.Client):
             game = self.active_games.get(channel_id)
             if game:
                 for i, role_id in enumerate(game.role_ids):
-                    await message.guild.get_member(game.players[i].uid).get_role(role_id).delete()
+                    await self.get_channel(channel_id).guild.get_member(game.players[i].uid).get_role(role_id).delete()
             processed_message = str(message.content).split()
             del processed_message[0]
             if channel_id in self.active_games:
