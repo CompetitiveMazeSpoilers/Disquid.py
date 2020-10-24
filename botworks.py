@@ -1,6 +1,7 @@
 import asyncio
 import glob
 import pickle
+from discord import Intents
 
 from model.game import *
 
@@ -234,7 +235,7 @@ class DisquidClient(discord.Client):
         """
         if gid == self.official_guild:
             role = await self.get_guild(gid).create_role(name='dft', mentionable=True, color=discord.Color(0xdd2e45))
-            member = await self.get_guild(gid).get_member(uid)
+            member = self.get_guild(gid).get_member(uid)
             if member:
                 member.add_roles(role)
             self.get_player(uid).role_id = role.id
@@ -1223,4 +1224,6 @@ class DisquidClient(discord.Client):
 
 
 if __name__ == '__main__':
-    DisquidClient().run(input('Bot API Token: '))
+    intents = Intents.default()
+    intents.members = True
+    DisquidClient(intents=intents).run(input('Bot API Token: '))
