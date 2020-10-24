@@ -962,7 +962,7 @@ class DisquidClient(discord.Client):
         if message.guild.id == self.official_guild:
             if not self.get_player(uid).role_id:
                 await self.make_player_role(gid=message.guild.id, uid=uid)
-            await message.author.get_role(self.get_player(uid).role_id).edit(
+            await message.guild.get_role(self.get_player(uid).role_id).edit(
                 name=str(processed_message[0]).lower())
             await message.channel.send('Name changed successfully!')
 
