@@ -409,10 +409,7 @@ class DisquidClient(discord.Client):
         del processed_message[0]
         if len(processed_message) == 0:
             active_descs = {}
-            if self.get_player(message.author.id).role_id:
-                color = await message.author.get_role(self.get_player(message.author.id).role_id).color
-            else:
-                color = 0xc0365e
+            color = message.guild.get_role(self.get_player(message.author.id).role_id).color if self.get_player(message.author.id).role_id else 0xc0365e
             embed_var = discord.Embed(title="Help Commands", color=color)
             for key in commands:
                 if is_admin or not commands[key].hidden:
@@ -553,7 +550,8 @@ class DisquidClient(discord.Client):
             await message.channel.send('Player does not exist.')
 
         player = self.players[prof_id]
-        embed_var = discord.Embed(title=f'{player.name}\'s profile.', color=0xc0365e)
+        color = message.guild.get_role(self.get_player(message.author.id).role_id).color if self.get_player(message.author.id).role_id else 0xc0365e
+        embed_var = discord.Embed(title=f'{player.name}\'s profile.', color=color)
         custom_emoji_strings = [[]]
         for c_emoji in player.custom_emoji:
             custom_emoji_strings.append(str(c_emoji))
@@ -978,7 +976,9 @@ class DisquidClient(discord.Client):
             game = self.active_games.get(channel_id)
             if game:
                 for i, role_id in enumerate(game.role_ids):
-                    await message.guild.get_role(role_id).delete()
+                    role = message.guild.get_role(role_id)
+                    if role:
+                        await role.delete()
             processed_message = str(message.content).split()
             del processed_message[0]
             if channel_id in self.active_games:
@@ -1150,10 +1150,22 @@ class DisquidClient(discord.Client):
         else:
             await message.channel.send('Insufficient user permissions.')
 
+    @command(['pass'], True)
+    async def pass_turn(self, message: discord.Message):
+        if message.author.id in DisquidClient.admins:
+            if message.channel.id in self.active_games:
+                game = self.active_games[message.channel.id]
+                game.cache.current_player = 3 - game.cache.current_player
+                await self.update_board(game, True)
+            else:
+                await message.channel.send('No board to update here.')
+
+
     async def update_board(self, game: Game, turn_incicator=False):
         channel = self.get_channel(game.channel_id)
         await channel.send('Incoming Board!')
         for final_substring in str(game).split('#msg'):
+            print(len(final_substring))
             await channel.send(final_substring)
         if turn_incicator:
             player = game.players[game.cache.current_player - 1]
@@ -1217,7 +1229,7 @@ class DisquidClient(discord.Client):
         game.to_video(self.data_path.joinpath('temp/'), self.video_dir)
         replay = f'{game.players[0].name}-v-{game.players[1].name}.mp4'
         with open(self.video_dir.joinpath(replay), 'rb') as f:
-            attachment = discord.File(f, filename=f'{game.players[0].name}-v-{game.players[1].name}')
+            attachment = discord.File(f, filename=f'{game.players[0].name}-v-{game.players[1].name}.mp4')
             await self.get_channel(DisquidClient.replay_channel).send(replay, file=attachment)
 
     async def close(self):

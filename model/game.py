@@ -133,7 +133,7 @@ class Game(object):
         for substring in board_string.split('#msg'):
             chars = 0
             for row_substring in substring.split('\n'):
-                chars += len(row_substring)
+                chars += len(row_substring) + 2 # adding in the break length
                 if chars >= 2000:
                     updated_board_string += '#msg'
                     chars = 0
