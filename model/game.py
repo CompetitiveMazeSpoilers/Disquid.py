@@ -134,7 +134,7 @@ class Game(object):
             chars = 0
             for row_substring in substring.split('\n'):
                 chars += len(row_substring)
-                if chars > 2000:
+                if chars >= 2000:
                     updated_board_string += '#msg'
                     chars = 0
                 updated_board_string += row_substring + '\n'
@@ -254,7 +254,8 @@ class Utility:
                 return '||' + Board.flag_array[i][j][1] + '||'
             else:
                 # player cell stand-in code
-                return game.players[player - 1].emoji[player - 1][0]
+                return game.players[player - 1].emoji[1][0] if game.players[0].emoji[0][0] == game.players[1].emoji[0][
+                    0] and player == 2 else game.players[player - 1].emoji[0][0]
 
         result = ''
         for i, (r, c) in enumerate(locs, 1):

@@ -1171,7 +1171,8 @@ class DisquidClient(discord.Client):
         loser = game.players[(3 - game.cache.current_player) - 1]
         await channel.send(f'<@{winner.uid}> WINS!')
         for i, role_id in enumerate(game.role_ids):
-            await channel.guild.get_member(game.players[i].uid).get_role(role_id).delete()
+            role = channel.guild.get_role(role_id)
+            await role.delete() if role else role
         self.active_games.pop(channel.id)
         if game.channel_id not in self.game_history:
             self.game_history.append(game)
