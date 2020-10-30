@@ -1217,7 +1217,7 @@ class DisquidClient(discord.Client):
         game.to_video(self.data_path.joinpath('temp/'), self.video_dir)
         replay = f'{game.players[0].name}-v-{game.players[1].name}.mp4'
         with open(self.video_dir.joinpath(replay), 'rb') as f:
-            attachment = discord.File(f)
+            attachment = discord.File(f, filename=f'{game.players[0].name}-v-{game.players[1].name}')
             await self.get_channel(DisquidClient.replay_channel).send(replay, file=attachment)
 
     async def close(self):
