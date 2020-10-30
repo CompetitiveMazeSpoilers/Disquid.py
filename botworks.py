@@ -236,8 +236,7 @@ class DisquidClient(discord.Client):
         if gid == self.official_guild:
             role = await self.get_guild(gid).create_role(name='dft', mentionable=True, color=discord.Color(0xdd2e45))
             member = self.get_guild(gid).get_member(uid)
-            if member:
-                member.add_roles(role)
+            await member.add_roles(role)
             self.get_player(uid).role_id = role.id
 
     def search_name(self, name: str) -> int:
@@ -383,7 +382,8 @@ class DisquidClient(discord.Client):
                 cache.move = None
                 if not reindexing:
                     if game.players[game.cache.current_player - 1].role_id:
-                        send = (f'It is {game.players[game.cache.current_player - 1].mention}/'
+                        send = (f'It is '
+                                f'{message.guild.get_role(game.players[game.cache.current_player - 1].role_id).mention}/ '
                                 f'<@{game.players[game.cache.current_player - 1].uid}>\'s turn! ')
                     else:
                         send = f'It is <@{game.players[game.cache.current_player - 1].uid}>\'s turn! '
@@ -679,8 +679,9 @@ class DisquidClient(discord.Client):
                 channel = message.channel
                 guild = channel.guild
                 category = None
+                category_id = channel.category_id if not guild.id == self.official_guild else 764879389648617522
                 for ca in guild.categories:
-                    if ca.id == channel.category_id:
+                    if ca.id == category_id:
                         category = ca
                         break
                 try:
@@ -719,7 +720,7 @@ class DisquidClient(discord.Client):
             player = target_game.players[target_game.cache.current_player - 1]
             if player.role_id:
                 send = (
-                    f'It is {await message.author.get_role(player.role_id).mention} '
+                    f'It is {message.guild.get_role(player.role_id).mention}/'
                     f'<@{target_game.players[target_game.cache.current_player - 1].uid}>\'s turn! '
                     f'Do \'{self.get_prefix(message.guild.id)}help moves\' for move help')
             else:
@@ -852,8 +853,8 @@ class DisquidClient(discord.Client):
             if tile_favor == 1 and tile_type == 2 and message.guild.id == self.official_guild:
                 if not emoji_owner.role_id:
                     await self.make_player_role(gid=message.guild.id, uid=message.author.id)
-                    await self.get_player(message.author.id).role_id.edit(
-                        color=discord.Color(await self.emoji_color_test(emoji_owner.emoji[0][1])))
+                await message.guild.get_role(self.get_player(message.author.id).role_id).edit(
+                    color=discord.Color(await self.emoji_color_test(emoji_owner.emoji[0][1])))
 
     @command(['upload'])
     async def upload_emoji(self, message: discord.Message):
@@ -977,7 +978,7 @@ class DisquidClient(discord.Client):
             game = self.active_games.get(channel_id)
             if game:
                 for i, role_id in enumerate(game.role_ids):
-                    await message.guild.get_member(game.players[i].uid).get_role(role_id).delete()
+                    await message.guild.get_role(role_id).delete()
             processed_message = str(message.content).split()
             del processed_message[0]
             if channel_id in self.active_games:
@@ -1158,7 +1159,7 @@ class DisquidClient(discord.Client):
             player = game.players[game.cache.current_player - 1]
             if player is not None:
                 send = (
-                    f'It is {await channel.guild.get_member(player.uid).get_role(player.role_id).mention}/'
+                    f'It is {channel.guild.get_role(player.role_id).mention}/'
                     f'<@{player.uid}>\'s turn! ')
             else:
                 send = f'It is <@{game.players[game.cache.current_player - 1].uid}>\'s turn! '
