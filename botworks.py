@@ -341,8 +341,8 @@ class DisquidClient(discord.Client):
             if message.channel.id not in self.active_games:
                 return
             game = self.active_games[message.channel.id]
-            if str(message.content) == 'draw' or str(message.content) == 'cancel':
-                if str(message.content) == 'draw' and message.author.id in game.players:
+            if str(message.content).lower() == 'draw' or str(message.content) == 'cancel':
+                if str(message.content).lower() == 'draw' and message.author.id in game.players:
                     if not game.draw_suggested:
                         if not reindexing:
                             await message.channel.send(
@@ -356,7 +356,12 @@ class DisquidClient(discord.Client):
                     game.draw_suggested = 0
                     if not reindexing:
                         await message.channel.send('Draw canceled.')
-
+            #if str(message.content).lower() == 'undo' and self.players[message.author.id] in game.players:
+            #   if game.players[game.cache.current_player-1].uid != message.author.id and datetime.datetime.now() - game.cache.time_since_last_move <= datetime.timedelta(seconds=5):
+            #        game.cache.latest = game.cache.save[-1]
+            #        game.cache.current_player = 3 - game.cache.current_player
+            #       await self.update_board(game)
+            #        return
             if not str(message.content)[0] in ['A', 'C', 'V', 'Q'] \
                     or len(message.content.split()) > 4:
                 return
@@ -388,6 +393,7 @@ class DisquidClient(discord.Client):
                     else:
                         send = f'It is <@{game.players[game.cache.current_player - 1].uid}>\'s turn! '
                     await message.channel.send(send)
+                    game.cache.time_since_last_move = datetime.datetime.now()
             except InvalidMove:
                 move_prefix = message.content.split()[0]
                 if move_prefix == 'V' and not reindexing:
@@ -984,13 +990,6 @@ class DisquidClient(discord.Client):
             if channel_id in self.active_games:
                 self.active_games.pop(channel_id)
                 await message.channel.send('Game Deleted.')
-
-                async def channel_del():
-                    await message.channel.send('Channel will be deleted in 1hr, and has been moved to game history.')
-                    await asyncio.sleep(3600)
-                    await message.channel.delete(reason='Game Complete')
-
-                asyncio.run_coroutine_threadsafe(channel_del(), asyncio.get_event_loop())
             else:
                 await message.channel.send('No game to delete in this channel.')
         else:
@@ -1185,8 +1184,8 @@ class DisquidClient(discord.Client):
         for i, role_id in enumerate(game.role_ids):
             role = channel.guild.get_role(role_id)
             await role.delete() if role else role
-        self.active_games.pop(channel.id)
-        if game.channel_id not in self.game_history:
+        game = self.active_games.pop(channel.id)
+        if game not in self.game_history:
             self.game_history.append(game)
             await self.update_board(game)
             winner.calc_elo(loser, True)
