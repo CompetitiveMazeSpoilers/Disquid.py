@@ -1,4 +1,5 @@
 from model.state import *
+import datetime
 
 
 class History(object):
@@ -69,6 +70,7 @@ class Cache(object):
         self.save = history.board_history()
         self.latest = self.save[-1]
         self.move = None
+        self.time_since_last_move: datetime.datetime = datetime.datetime.now()
 
     def preview(self, move: Move):
         return move(self.latest, validate=True)

@@ -45,7 +45,7 @@ class Player(object):
 
     def calc_elo(self, ply2, win: bool):
         p1 = (1.0 / (1.0 + pow(10, (ply2.elo - self.elo) / 100)))
-        self.elo += round(30 * (1 - p1 if win else 0 - p1))
+        self.elo += round(60 * (1 - p1 if win else 0 - p1))
         if self.elo < 0:
             self.elo = 0
 
@@ -117,14 +117,14 @@ class Game(object):
 
             priority_count = 0
             while base_emoji in used_emojis and priority_count < len(player.emoji):
-                priority_count += 1
                 base_emoji = player.emoji[priority_count][1]
+                priority_count += 1
             used_emojis.append(base_emoji)
 
             priority_count = 0
             while tile_emoji in used_emojis and priority_count < len(player.emoji):
-                priority_count += 1
                 tile_emoji = player.emoji[priority_count][0]
+                priority_count += 1
             used_emojis.append(tile_emoji)
 
             board_string = board_string.replace(f'p{i + 1}b', base_emoji)
