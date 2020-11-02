@@ -341,8 +341,9 @@ class DisquidClient(discord.Client):
             if message.channel.id not in self.active_games:
                 return
             game = self.active_games[message.channel.id]
-            if str(message.content) in ['draw','cancel','forfeit']:
-                if str(message.content) == 'draw' and message.author.id in game.players:
+            msg = str(message.content).lower()
+            if message.author.id in game.players:
+                if msg == 'draw':
                     if not game.draw_suggested:
                         if not reindexing:
                             await message.channel.send(
@@ -352,7 +353,7 @@ class DisquidClient(discord.Client):
                         return
                     elif not game.draw_suggested == message.author.id:
                         await self.on_draw(game)
-                elif str(message.content) == 'cancel':
+                elif msg == 'cancel':
                     if not reindexing:
                         if game.draw_suggested:
                             await message.channel.send('Draw canceled.')
@@ -360,7 +361,7 @@ class DisquidClient(discord.Client):
                         elif message.author.id == game.forfeit_suggested:
                             await message.channel.send('Forfeit aborted')
                             game.forfeit_suggested = 0
-                elif str(message.content) == 'forfeit':
+                elif msg == 'forfeit':
                     if not game.forfeit_suggested:
                         if not reindexing:
                             await message.channel.send(
@@ -375,7 +376,12 @@ class DisquidClient(discord.Client):
                         await self.on_win(game)
                         game.cache.move = None
                         return
-
+            #if str(message.content).lower() == 'undo' and self.players[message.author.id] in game.players:
+            #   if game.players[game.cache.current_player-1].uid != message.author.id and datetime.datetime.now() - game.cache.time_since_last_move <= datetime.timedelta(seconds=5):
+            #        game.cache.latest = game.cache.save[-1]
+            #        game.cache.current_player = 3 - game.cache.current_player
+            #       await self.update_board(game)
+            #        return
             if not str(message.content)[0] in ['A', 'C', 'V', 'Q'] \
                     or len(message.content.split()) > 4:
                 return
