@@ -104,6 +104,7 @@ class Game(object):
         self.history = History(r, c, bases, [])
         self.cache = Cache(self.history)
         self.draw_suggested = 0
+        self.forfeit_suggested = 0
         self.role_ids = [None, None] if not role_ids else role_ids
 
     def __str__(self):

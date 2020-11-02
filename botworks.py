@@ -341,7 +341,7 @@ class DisquidClient(discord.Client):
             if message.channel.id not in self.active_games:
                 return
             game = self.active_games[message.channel.id]
-            if str(message.content) == 'draw' or str(message.content) == 'cancel':
+            if str(message.content) in ['draw','cancel','forfeit']:
                 if str(message.content) == 'draw' and message.author.id in game.players:
                     if not game.draw_suggested:
                         if not reindexing:
@@ -352,10 +352,29 @@ class DisquidClient(discord.Client):
                         return
                     elif not game.draw_suggested == message.author.id:
                         await self.on_draw(game)
-                else:
-                    game.draw_suggested = 0
+                elif str(message.content) == 'cancel':
                     if not reindexing:
-                        await message.channel.send('Draw canceled.')
+                        if game.draw_suggested:
+                            await message.channel.send('Draw canceled.')
+                            game.draw_suggested = 0
+                        elif message.author.id == game.forfeit_suggested:
+                            await message.channel.send('Forfeit aborted')
+                            game.forfeit_suggested = 0
+                elif str(message.content) == 'forfeit':
+                    if not game.forfeit_suggested:
+                        if not reindexing:
+                            await message.channel.send(
+                                'Are you sure? Enter \'forfeit\' to finalize or \'cancel\' to cancel')
+                        game.forfeit_suggested = message.author.id
+                        return
+                    elif game.forfeit_suggested == message.author.id:
+                        if message.author.id == game.players[0].uid:
+                            game.cache.current_player = 2
+                        else:
+                            game.cache.current_player = 1
+                        await self.on_win(game)
+                        game.cache.move = None
+                        return
 
             if not str(message.content)[0] in ['A', 'C', 'V', 'Q'] \
                     or len(message.content.split()) > 4:
