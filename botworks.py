@@ -341,8 +341,9 @@ class DisquidClient(discord.Client):
             if message.channel.id not in self.active_games:
                 return
             game = self.active_games[message.channel.id]
-            if str(message.content).lower() == 'draw' or str(message.content) == 'cancel':
-                if str(message.content).lower() == 'draw' and message.author.id in game.players:
+            msg = str(message.content).lower()
+            if message.author.id in game.players:
+                if msg == 'draw':
                     if not game.draw_suggested:
                         if not reindexing:
                             await message.channel.send(
@@ -352,10 +353,29 @@ class DisquidClient(discord.Client):
                         return
                     elif not game.draw_suggested == message.author.id:
                         await self.on_draw(game)
-                else:
-                    game.draw_suggested = 0
+                elif msg == 'cancel':
                     if not reindexing:
-                        await message.channel.send('Draw canceled.')
+                        if game.draw_suggested:
+                            await message.channel.send('Draw canceled.')
+                            game.draw_suggested = 0
+                        elif message.author.id == game.forfeit_suggested:
+                            await message.channel.send('Forfeit aborted')
+                            game.forfeit_suggested = 0
+                elif msg == 'forfeit':
+                    if not game.forfeit_suggested:
+                        if not reindexing:
+                            await message.channel.send(
+                                'Are you sure? Enter \'forfeit\' to finalize or \'cancel\' to cancel')
+                        game.forfeit_suggested = message.author.id
+                        return
+                    elif game.forfeit_suggested == message.author.id:
+                        if message.author.id == game.players[0].uid:
+                            game.cache.current_player = 2
+                        else:
+                            game.cache.current_player = 1
+                        await self.on_win(game)
+                        game.cache.move = None
+                        return
             #if str(message.content).lower() == 'undo' and self.players[message.author.id] in game.players:
             #   if game.players[game.cache.current_player-1].uid != message.author.id and datetime.datetime.now() - game.cache.time_since_last_move <= datetime.timedelta(seconds=5):
             #        game.cache.latest = game.cache.save[-1]
@@ -393,7 +413,6 @@ class DisquidClient(discord.Client):
                     else:
                         send = f'It is <@{game.players[game.cache.current_player - 1].uid}>\'s turn! '
                     await message.channel.send(send)
-                    game.cache.time_since_last_move = datetime.datetime.now()
             except InvalidMove:
                 move_prefix = message.content.split()[0]
                 if move_prefix == 'V' and not reindexing:
@@ -990,6 +1009,13 @@ class DisquidClient(discord.Client):
             if channel_id in self.active_games:
                 self.active_games.pop(channel_id)
                 await message.channel.send('Game Deleted.')
+
+                async def channel_del():
+                    await message.channel.send('Channel will be deleted in 1hr, and has been moved to game history.')
+                    await asyncio.sleep(3600)
+                    await message.channel.delete(reason='Game Complete')
+
+                asyncio.run_coroutine_threadsafe(channel_del(), asyncio.get_event_loop())
             else:
                 await message.channel.send('No game to delete in this channel.')
         else:
@@ -1184,8 +1210,8 @@ class DisquidClient(discord.Client):
         for i, role_id in enumerate(game.role_ids):
             role = channel.guild.get_role(role_id)
             await role.delete() if role else role
-        game = self.active_games.pop(channel.id)
-        if game not in self.game_history:
+        self.active_games.pop(channel.id)
+        if game.channel_id not in self.game_history:
             self.game_history.append(game)
             await self.update_board(game)
             winner.calc_elo(loser, True)
