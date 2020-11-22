@@ -301,9 +301,9 @@ class DisquidClient(discord.Client):
         print(f'Disquid {__version__} ready.')
         if self.get_channel(764699769829982218) is not None:
             await self.get_channel(764699769829982218).send(f'Disquid {__version__} is now online and ready.')
-        if len(self.game_history) > len(glob.glob(str(self.video_dir.joinpath('*.mp4')))):
-            print(len(self.game_history))
-            await self.regen_videos()
+        #if len(self.game_history) > len(glob.glob(str(self.video_dir.joinpath('*.mp4')))):
+        #    print(len(self.game_history))
+        #    await self.regen_videos()
 
     async def on_guild_join(self, guild: discord.Guild):
         """
