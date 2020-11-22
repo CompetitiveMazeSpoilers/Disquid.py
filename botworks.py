@@ -1211,7 +1211,7 @@ class DisquidClient(discord.Client):
         channel = self.get_channel(game.channel_id)
         await channel.send('Game ends in a draw. Shake hands now.')
         for i, role_id in enumerate(game.role_ids):
-            await channel.guild.get_member(game.players[i].uid).get_role(role_id).delete()
+            await channel.guild.get_role(role_id).delete()
         self.active_games.pop(channel.id)
         if game.channel_id not in self.active_games:
             self.game_history.append(game)
